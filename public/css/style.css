@@ -1024,13 +1024,13 @@ body.obs-mode #canvas-container {
 
   .hud-gift-panel {
     top: 50px;
-    right: 8px;
+    right: 14px;
     max-height: calc(100vh - 65px);
   }
 
   .hud-gift-legend {
     gap: 7px;
-    padding: 2px;
+    padding: 2px 4px 2px 2px;
   }
 
   .gift-badge-item {
@@ -1040,6 +1040,7 @@ body.obs-mode #canvas-container {
     border-width: 2px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75);
     background: rgba(15, 23, 42, 0.94);
+    max-width: calc(100vw - 28px);
   }
 
   .gift-badge-icon {
