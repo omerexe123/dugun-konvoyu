@@ -35,6 +35,7 @@ class ConvoyAudioEngine {
 
     // Varsayılan Çalma Listesi (JSON yüklenene kadar veya offline yedek)
     this.defaultPlaylist = [
+      { id: 'dugun_kara_uzum_habbesi', title: 'İbrahim Tatlıses - Kara Üzüm Habbesi', category: 'Düğün / Halay', url: 'audio/music/dugun_kara_uzum_habbesi.mp3' },
       { id: 'dugun_erik_dali', title: 'Ömer Faruk Bostan - Erik Dalı', category: 'Düğün / Oyun Havası', url: 'audio/music/dugun_erik_dali.mp3' },
       { id: 'dugun_halay_potpori', title: 'Coşkulu Davul Zurna & Halay Potpori', category: 'Düğün / Halay', url: 'audio/music/dugun_halay_potpori.mp3' },
       { id: 'dugun_ankara_kostak', title: 'Ankara Oyun Havası (Kostak & Fidayda)', category: 'Düğün / Ankara Havası', url: 'audio/music/dugun_ankara_kostak.mp3' },
