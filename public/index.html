@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png" />
   <link rel="apple-touch-icon" href="/images/icon-192.png" />
   <title>Düğün Konvoyu – TikTok Canlı Yayın 3D Oyunu</title>
-  <link rel="stylesheet" href="css/style.css?v=25" />
+  <link rel="stylesheet" href="css/style.css?v=26" />
 </head>
 <body>
   <!-- 3D Three.js Sahnesi -->
@@ -22,72 +22,72 @@
   <!-- 3D Araç Etiketleri Katmanı -->
   <div id="labels-container"></div>
 
-  <!-- Üst Orta: Canlı Yayın & Hediye Rozetleri (HUD) -->
-  <header class="wedding-hud-wrapper">
-    <div class="wedding-hud">
-      <div class="hud-gift-legend">
-        <div class="gift-badge-item badge-like" title="Çift Tıkla / Beğen Konvoya Katıl ve Öne Geç">
-          <span class="gift-badge-icon" style="font-size: 26px; text-align: center; line-height: 38px; display: inline-flex;">❤️</span>
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">BEĞEN KATIL</span>
-            <span class="gift-badge-cost">1❤️ = 1 Puan</span>
-          </div>
+  <!-- Üst Orta: Konvoy Lideri Rozeti -->
+  <div id="hud-leader-box" class="hud-leader-badge">
+    <span>👑</span> Gelin arabasının arkasında: <b id="hud-leader-name">Konvoy Lideri</b>
+  </div>
+
+  <!-- Sağ Taraf: Canlı Hediye Rozetleri (Mobil & Dikey Yayın Uyumlu) -->
+  <aside id="hud-gift-panel" class="hud-gift-panel">
+    <div class="hud-gift-legend">
+      <div class="gift-badge-item badge-like" title="Çift Tıkla / Beğen Konvoya Katıl ve Öne Geç">
+        <span class="gift-badge-icon" style="font-size: 24px; text-align: center; line-height: 36px; display: inline-flex;">❤️</span>
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">BEĞEN KATIL</span>
+          <span class="gift-badge-cost">1❤️ = 1 Puan</span>
         </div>
-        <div class="gift-badge-item badge-bride">
-          <img src="images/gifts/perfume.webp" class="gift-badge-icon" alt="Perfume" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">GELİN OL</span>
-            <span class="gift-badge-cost">1x Perfume (20🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-bride">
+        <img src="images/gifts/perfume.webp" class="gift-badge-icon" alt="Perfume" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">GELİN OL</span>
+          <span class="gift-badge-cost">1x Perfume (20🪙)</span>
         </div>
-        <div class="gift-badge-item badge-groom">
-          <img src="images/gifts/hat_mustache.webp" class="gift-badge-icon" alt="Hat and Mustache" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">DAMAT OL</span>
-            <span class="gift-badge-cost">1x Hat/Mustache (99🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-groom">
+        <img src="images/gifts/hat_mustache.webp" class="gift-badge-icon" alt="Hat and Mustache" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">DAMAT OL</span>
+          <span class="gift-badge-cost">1x Hat/Mustache (99🪙)</span>
         </div>
-        <div class="gift-badge-item badge-drift">
-          <img src="images/gifts/rose.webp" class="gift-badge-icon" alt="Rose" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">DRİFT AT</span>
-            <span class="gift-badge-cost">1x Rose (1🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-drift">
+        <img src="images/gifts/rose.webp" class="gift-badge-icon" alt="Rose" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">DRİFT AT</span>
+          <span class="gift-badge-cost">1x Rose (1🪙)</span>
         </div>
-        <div class="gift-badge-item badge-motor">
-          <img src="images/gifts/gg.webp" class="gift-badge-icon" alt="GG" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">MOTORLA ÇIK</span>
-            <span class="gift-badge-cost">1x GG (1🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-motor">
+        <img src="images/gifts/gg.webp" class="gift-badge-icon" alt="GG" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">MOTORLA ÇIK</span>
+          <span class="gift-badge-cost">1x GG (1🪙)</span>
         </div>
-        <div class="gift-badge-item badge-neon">
-          <img src="images/gifts/tiktok.webp" class="gift-badge-icon" alt="TikTok" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">ALTA NEON</span>
-            <span class="gift-badge-cost">1x TikTok (1🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-neon">
+        <img src="images/gifts/tiktok.webp" class="gift-badge-icon" alt="TikTok" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">ALTA NEON</span>
+          <span class="gift-badge-cost">1x TikTok (1🪙)</span>
         </div>
-        <div class="gift-badge-item badge-burnout">
-          <img src="images/gifts/cake_slice.webp" class="gift-badge-icon" alt="Cake Slice" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">LASTİK YAK</span>
-            <span class="gift-badge-cost">1x Cake Slice (1🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-burnout">
+        <img src="images/gifts/cake_slice.webp" class="gift-badge-icon" alt="Cake Slice" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">LASTİK YAK</span>
+          <span class="gift-badge-cost">1x Cake Slice (1🪙)</span>
         </div>
-        <div class="gift-badge-item badge-wheelie">
-          <img src="images/gifts/ice_cream.webp" class="gift-badge-icon" alt="Ice Cream Cone" />
-          <div class="gift-badge-text">
-            <span class="gift-badge-title">TEK TEKER</span>
-            <span class="gift-badge-cost">1x Ice Cream (1🪙)</span>
-          </div>
+      </div>
+      <div class="gift-badge-item badge-wheelie">
+        <img src="images/gifts/ice_cream.webp" class="gift-badge-icon" alt="Ice Cream Cone" />
+        <div class="gift-badge-text">
+          <span class="gift-badge-title">TEK TEKER</span>
+          <span class="gift-badge-cost">1x Ice Cream (1🪙)</span>
         </div>
       </div>
     </div>
-    <div id="hud-leader-box" class="hud-leader-badge">
-      <span>👑</span> Gelin arabasının arkasında: <b id="hud-leader-name">Konvoy Lideri</b>
-    </div>
-  </header>
+  </aside>
 
   <!-- Üst Olay Bildirim Banner'ı -->
   <div id="event-banner" class="event-banner"></div>
@@ -199,27 +199,39 @@
 
       <!-- 4. Hediye & Kural Kılavuzu -->
       <section class="panel-section gift-guide-section">
-        <span class="section-label">TikTok Canlı Hediye Kuralları</span>
+        <span class="section-label">TikTok Canlı Hediye Kuralları (TR)</span>
         <div class="gift-rules-list">
           <div class="rule-item">
-            <span class="rule-badge badge-rose">🌹 Gül (1 Jeton)</span>
+            <span class="rule-badge badge-rose">🌹 Rose (1🪙)</span>
             <span class="rule-desc">Yanlama & Efsane Drift</span>
           </div>
           <div class="rule-item">
-            <span class="rule-badge badge-motor">🏍️ Kalp / Asa (~5 TL)</span>
-            <span class="rule-desc">3D Sürücülü Motosiklet & Tek Teker</span>
+            <span class="rule-badge badge-motor">🎮 GG (1🪙)</span>
+            <span class="rule-desc">3D Yarış Motosikletiyle Çık</span>
           </div>
           <div class="rule-item">
-            <span class="rule-badge badge-smoke">💨 Çörek / Ara Gazı</span>
+            <span class="rule-badge badge-smoke">🍰 Cake Slice (1🪙)</span>
             <span class="rule-desc">Asfaltı Kazıyan Lastik Yakma (Burnout)</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge" style="background: rgba(168,85,247,0.25); border-color: #a855f7; color: #d8b4fe;">🍦 Ice Cream Cone (1🪙)</span>
+            <span class="rule-desc">Motosiklette Tek Teker Gösterisi</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge" style="background: rgba(6,182,212,0.25); border-color: #06b6d4; color: #67e8f9;">🎵 TikTok (1🪙)</span>
+            <span class="rule-desc">Aracın Altına Canlı Neon Tak</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge" style="background: rgba(236,72,153,0.25); border-color: #ec4899; color: #fbcfe8;">🌸 Perfume (20🪙)</span>
+            <span class="rule-desc">Siyah Mercedes Gelin Koltuğuna Geç</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge" style="background: rgba(59,130,246,0.25); border-color: #3b82f6; color: #93c5fd;">🎩 Hat & Mustache (99🪙)</span>
+            <span class="rule-desc">Siyah Mercedes Damat Koltuğuna Geç</span>
           </div>
           <div class="rule-item">
             <span class="rule-badge badge-like">❤️ Beğeni (Çift Tık)</span>
             <span class="rule-desc">Otomatik Konvoya Katılma & İlerleme</span>
-          </div>
-          <div class="rule-item">
-            <span class="rule-badge badge-lead">👑 En Çok Hediye Atan</span>
-            <span class="rule-desc">Siyah Mercedes Gelin & Damat Koltuğu</span>
           </div>
         </div>
       </section>
@@ -254,25 +266,30 @@
             <img src="images/gifts/rose.webp" class="sim-gift-icon" alt="" /> <b>Gül Drifti (1🪙)</b>
           </button>
           <button class="sim-btn" data-sim="motor" style="border-color: #10b981; background: rgba(16,185,129,0.12);">
-            <img src="images/gifts/rosa.webp" class="sim-gift-icon" alt="" /> <b>5 TL Motor (10🪙)</b>
+            <img src="images/gifts/gg.webp" class="sim-gift-icon" alt="" /> <b>GG Motor (1🪙)</b>
           </button>
-          <button class="sim-btn" data-sim="wheelie" style="border-color: #fbbf24; background: rgba(251,191,36,0.12);">
-            <img src="images/gifts/heart.webp" class="sim-gift-icon" alt="" /> <b>Tek Teker (10🪙)</b>
+          <button class="sim-btn" data-sim="wheelie" style="border-color: #a855f7; background: rgba(168,85,247,0.12);">
+            <img src="images/gifts/ice_cream.webp" class="sim-gift-icon" alt="" /> <b>Tek Teker (1🪙)</b>
           </button>
           <button class="sim-btn" data-sim="burnout" style="border-color: #f97316; background: rgba(249,115,22,0.12);">
-            <img src="images/gifts/fire.webp" class="sim-gift-icon" alt="" /> <b>Lastik Yak (5🪙)</b>
+            <img src="images/gifts/cake_slice.webp" class="sim-gift-icon" alt="" /> <b>Lastik Yak (1🪙)</b>
           </button>
           <button class="sim-btn" data-sim="neon" style="border-color: #06b6d4; background: rgba(6,182,212,0.15); color: #67e8f9;">
-            <img src="images/gifts/sunglasses.webp" class="sim-gift-icon" alt="" /> <b>Alt Neon (199🪙)</b>
+            <img src="images/gifts/tiktok.webp" class="sim-gift-icon" alt="" /> <b>Alt Neon (1🪙)</b>
           </button>
           <button class="sim-btn" data-sim="bride" style="border-color: #ec4899; background: rgba(236,72,153,0.15); color: #fbcfe8;">
-            <img src="images/gifts/swan.webp" class="sim-gift-icon" alt="" /> <b>Kuğu / Gelin Ol (699🪙)</b>
+            <img src="images/gifts/perfume.webp" class="sim-gift-icon" alt="" /> <b>Gelin Ol (20🪙)</b>
           </button>
           <button class="sim-btn" data-sim="groom" style="border-color: #3b82f6; background: rgba(59,130,246,0.15); color: #93c5fd;">
-            <img src="images/gifts/lion.webp" class="sim-gift-icon" alt="" /> <b>Aslan / Damat Ol (500🪙)</b>
+            <img src="images/gifts/hat_mustache.webp" class="sim-gift-icon" alt="" /> <b>Damat Ol (99🪙)</b>
           </button>
           <button class="sim-btn" data-sim="honk">
             <span>📣</span> <b>Düğün Kornası</b>
+          </button>
+          <button class="sim-btn" data-sim="selektor">
+            <span>💡</span> <b>Selektör Çak</b>
+          </button>
+        </div>
           </button>
           <button class="sim-btn" data-sim="selektor" style="border-color: #38bdf8; background: rgba(56,189,248,0.15); color: #e0f2fe;">
             <span>💡⚡</span> <b>Selektör Çak (F)</b>
