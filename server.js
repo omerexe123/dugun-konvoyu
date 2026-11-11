@@ -221,12 +221,13 @@ function extractTikTokUser(data) {
     };
   }
 
-  // 1. uniqueId / userId
+  // 1. uniqueId / displayId / userId
   let uId = data.uniqueId ||
-            (data.user && (data.user.uniqueId || data.user.idStr || data.user.userId)) ||
+            data.displayId ||
+            (data.user && (data.user.uniqueId || data.user.displayId || data.user.idStr || data.user.userId)) ||
             data.userId ||
             data.secUid ||
-            (data.userDetails && (data.userDetails.uniqueId || data.userDetails.userId));
+            (data.userDetails && (data.userDetails.uniqueId || data.userDetails.displayId || data.userDetails.userId));
 
   if (!uId || uId === 'undefined' || uId === 'null') {
     const rawNick = data.nickname || (data.user && data.user.nickname);
@@ -243,6 +244,7 @@ function extractTikTokUser(data) {
              (data.user && data.user.nickname) ||
              (data.userDetails && (data.userDetails.nickName || data.userDetails.nickname)) ||
              data.uniqueId ||
+             data.displayId ||
              uId;
   nick = String(nick).trim();
   if (!nick || nick === 'undefined' || nick === 'null') {
@@ -277,14 +279,34 @@ function extractTikTokUser(data) {
 }
 
 // -------------------------------------------------------------
-// TikTok Live Bağlantısı
+// TikTok Live Bağlantısı & Otomatik Yeniden Bağlanma Motoru
 // -------------------------------------------------------------
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+let savedConfig = { targetUsername: null };
+try {
+  if (fs.existsSync(CONFIG_FILE)) {
+    savedConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+  }
+} catch (e) {}
+
 let liveClient = null;
 let liveStatus = { connected: false, username: null, viewerCount: 0, error: null };
+let reconnectTimer = null;
 
 function connectToTikTok(targetUsername) {
   if (!targetUsername) return;
   targetUsername = targetUsername.replace(/^@/, '').trim();
+
+  // Hedef hesabı kalıcı olarak kaydet
+  savedConfig.targetUsername = targetUsername;
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(savedConfig, null, 2));
+  } catch (e) {}
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
 
   if (liveClient) {
     try {
@@ -297,7 +319,7 @@ function connectToTikTok(targetUsername) {
   liveStatus = { connected: false, username: targetUsername, viewerCount: 0, error: 'Bağlanılıyor...' };
   broadcast('TIKTOK_STATUS', liveStatus);
 
-  console.log(`[TIKTOK] @${targetUsername} düğün konvoyuna bağlanılıyor...`);
+  console.log(`[TIKTOK] @${targetUsername} canlı yayınına bağlanılıyor...`);
 
   try {
     liveClient = new TikTokLiveConnection(targetUsername, {
@@ -309,19 +331,36 @@ function connectToTikTok(targetUsername) {
       liveStatus.connected = true;
       liveStatus.error = null;
       liveStatus.roomId = state.roomId;
-      console.log(`[TIKTOK] @${targetUsername} BAĞLANDI!`);
+      console.log(`[TIKTOK] @${targetUsername} BAĞLANDI! (Oda ID: ${state.roomId})`);
       broadcast('TIKTOK_STATUS', liveStatus);
     }).catch(err => {
-      console.error(`[TIKTOK] Hata:`, err.message);
+      const errMsg = err.message || 'Bağlantı kurulamadı';
+      console.error(`[TIKTOK] Bağlantı Hatası:`, errMsg);
       liveStatus.connected = false;
-      liveStatus.error = err.message || 'Bağlantı kurulamadı';
+      liveStatus.error = errMsg;
       broadcast('TIKTOK_STATUS', liveStatus);
+
+      // Yayın henüz açılmadıysa vazgeçme, 5 saniyede bir otomatik tekrar dene!
+      if (errMsg.includes("isn't online") || errMsg.includes('offline') || errMsg.includes('LIVE_ROOM_NOT_FOUND')) {
+        console.log(`[TIKTOK] @${targetUsername} henüz yayında değil, 5 sn sonra otomatik tekrar denenecek...`);
+        reconnectTimer = setTimeout(() => {
+          if (!liveStatus.connected && targetUsername === savedConfig.targetUsername) {
+            connectToTikTok(targetUsername);
+          }
+        }, 5000);
+      }
     });
 
     liveClient.on('disconnected', () => {
+      console.warn(`[TIKTOK] Bağlantı kesildi, 5 sn sonra yeniden bağlanılıyor...`);
       liveStatus.connected = false;
-      liveStatus.error = 'Bağlantı kesildi';
+      liveStatus.error = 'Bağlantı kesildi, yeniden bağlanılıyor...';
       broadcast('TIKTOK_STATUS', liveStatus);
+      reconnectTimer = setTimeout(() => {
+        if (!liveStatus.connected && targetUsername === savedConfig.targetUsername) {
+          connectToTikTok(targetUsername);
+        }
+      }, 5000);
     });
 
     liveClient.on('roomUser', data => {
@@ -347,7 +386,9 @@ function connectToTikTok(targetUsername) {
     // Kural: "yayını beğendikçe konvoya katılınsın ve öne geçilsin"
     liveClient.on('like', data => {
       const u = extractTikTokUser(data);
-      handleUserLikes(u.uniqueId, u.nickname, u.avatar, data.likeCount || 1);
+      const count = Number(data.likeCount || data.count || 1) || 1;
+      console.log(`[TIKTOK LIKE] @${u.uniqueId} (${u.nickname}) +${count} beğeni attı!`);
+      handleUserLikes(u.uniqueId, u.nickname, u.avatar, count);
     });
 
     liveClient.on('gift', data => {
@@ -357,6 +398,7 @@ function connectToTikTok(targetUsername) {
       const giftName = data.giftName || 'Hediye';
       const u = extractTikTokUser(data);
 
+      console.log(`[TIKTOK GIFT] @${u.uniqueId} (${u.nickname}) hediye attı: ${giftName} x${repeatCount}`);
       handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, repeatCount);
     });
 
@@ -371,6 +413,12 @@ function connectToTikTok(targetUsername) {
     liveStatus.error = err.message;
     broadcast('TIKTOK_STATUS', liveStatus);
   }
+}
+
+// Kayıtlı hesap varsa sunucu başlar başlamaz otomatik bağlan
+if (savedConfig.targetUsername) {
+  console.log(`[TIKTOK] Son kullanılan hesaba otomatik bağlanılıyor: @${savedConfig.targetUsername}`);
+  setTimeout(() => connectToTikTok(savedConfig.targetUsername), 2000);
 }
 
 // -------------------------------------------------------------
@@ -415,17 +463,33 @@ function handleSelektor(uniqueId, nickname) {
 
 // Beğeni Gelince Otomatik Konvoya Katılma & Puan (1 Beğeni = 1 Puan, Konvoyda Öne Geçiş)
 function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
-  uniqueId = String(uniqueId).trim();
-  let user = gameState.users[uniqueId];
-  const isFirstJoin = !user;
-  
-  if (!user) {
-    user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
-    handleUserJoin(uniqueId, nickname, avatar);
+  uniqueId = String(uniqueId || '').trim();
+  if (!uniqueId || uniqueId === 'undefined') {
+    uniqueId = 'izleyici_' + Math.floor(Math.random() * 90000 + 10000);
   }
+  if (!nickname || nickname === 'undefined') {
+    nickname = 'Konvoycu_' + uniqueId.slice(-4);
+  }
+
+  const isNew = !gameState.users[uniqueId];
+  const user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
 
   user.likesSent = (user.likesSent || 0) + count;
   gameState.stats.totalLikes += count;
+
+  const sorted = getSortedConvoy();
+  const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+
+  // Anında konvoy katılım & beğeni bildirimini yayınla
+  broadcast('EVENT_CONVOY_JOIN', {
+    user,
+    rankIdx: Math.max(0, rankIdx),
+    isNew,
+    count,
+    message: isNew
+      ? `🚗❤️ ${user.nickname} yayını beğenerek konvoya katıldı!`
+      : `❤️ ${user.nickname} yayını beğendi (+${count} Beğeni)!`
+  });
 
   // Her beğeni anında puan kazandırır ve konvoyda öne taşır!
   addPointsToConvoyUser(user, count, `${count} Beğeni`);

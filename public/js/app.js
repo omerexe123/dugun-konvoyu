@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('obs-mode');
   }
 
-  const autoUser = urlParams.get('user');
+  const autoUser = urlParams.get('user') || urlParams.get('tiktok');
 
   // UI Referansları
   const tiktokInput = document.getElementById('tiktok-username');
@@ -263,6 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'EVENT_CONVOY_JOIN':
         convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || Object.keys(convoy.convoyCars).length);
+        if (payload.isNew) {
+          convoy.showBanner(payload.message, 'banner-join', 3500);
+        }
         addLog(payload.message, 'log-join');
         break;
 
