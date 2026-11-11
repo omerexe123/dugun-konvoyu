@@ -378,8 +378,6 @@ function connectToTikTok(targetUsername) {
         handleUserJoin(u.uniqueId, u.nickname, u.avatar);
       } else if (comment.includes('korna') || comment.includes('düt')) {
         handleHonk(u.uniqueId, u.nickname);
-      } else if (comment.includes('motor')) {
-        handleMotorcycleUpgrade(u.uniqueId, u.nickname, u.avatar);
       }
     });
 
