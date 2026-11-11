@@ -341,7 +341,7 @@ function connectToTikTok(targetUsername) {
       broadcast('TIKTOK_STATUS', liveStatus);
 
       // Yayın henüz açılmadıysa vazgeçme, 5 saniyede bir otomatik tekrar dene!
-      if (errMsg.includes("isn't online") || errMsg.includes('offline') || errMsg.includes('LIVE_ROOM_NOT_FOUND')) {
+      if (errMsg.includes("isn't online") || errMsg.includes('offline') || errMsg.includes('LIVE_ROOM_NOT_FOUND') || errMsg.includes('Room ID') || errMsg.includes('retrieve')) {
         console.log(`[TIKTOK] @${targetUsername} henüz yayında değil, 5 sn sonra otomatik tekrar denenecek...`);
         reconnectTimer = setTimeout(() => {
           if (!liveStatus.connected && targetUsername === savedConfig.targetUsername) {
