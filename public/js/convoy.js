@@ -142,8 +142,8 @@ class ConvoyManager {
     // 3 Şeritli Doğal Konvoy Dizilimi (-2.85: Sol, 0: Orta, 2.85: Sağ)
     const laneOffsetsX = [0, 2.85, -2.85];
     const targetX = laneOffsetsX[rankIdx % 3];
-    // Gelin arabasının arkasında (+Z yönüne doğru akan konvoy sırası)
-    const targetZ = -4.0 - Math.floor(rankIdx / 3) * 16.0 - (rankIdx % 3) * 4.5;
+    // Gelin arabasının arkasında (+Z yönüne doğru akan doğal konvoy aralığı: sıra başı 7.5m, şerit içi 2.2m)
+    const targetZ = -5.0 - Math.floor(rankIdx / 3) * 7.5 - (rankIdx % 3) * 2.2;
 
     const isMotorcycle = user.vehicleType === 'motor';
 
@@ -791,8 +791,8 @@ class ConvoyManager {
     Object.values(this.convoyCars).forEach(cObj => {
       const carPos = cObj.group.position;
 
-      // Görüş alanı dışındaki araçları WebGL render'ından düşür (Draw Call Tasarrufu)
-      const isVisibleRange = (carPos.z > -65 && carPos.z < 45);
+      // 100+ araca kadar kesintisiz akış (-280m derinlik)
+      const isVisibleRange = (carPos.z > -280 && carPos.z < 80);
       cObj.group.visible = isVisibleRange;
 
       if (!cObj.labelEl) return;
@@ -814,9 +814,9 @@ class ConvoyManager {
         const sx = (tempV.x * 0.5 + 0.5) * w;
         const sy = (-tempV.y * 0.5 + 0.5) * h;
         const dist = camera.position.distanceTo(carPos);
-        // Mobilde ve yayında küçülüp kaybolmaması için minimum 0.75 ölçek
-        const scale = Math.max(0.75, Math.min(1.20, 38 / dist));
-        const opacity = dist > 48 ? Math.max(0, 1 - (dist - 48) / 24) : 1;
+        // Mobilde ve yayında küçülüp kaybolmaması için minimum 0.70 ölçek
+        const scale = Math.max(0.70, Math.min(1.20, 42 / dist));
+        const opacity = dist > 90 ? Math.max(0, 1 - (dist - 90) / 45) : 1;
         cObj.labelEl.style.opacity = opacity.toFixed(2);
         cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(2)})`;
       }
