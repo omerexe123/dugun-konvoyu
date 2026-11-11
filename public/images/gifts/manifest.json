@@ -1,0 +1,106 @@
+[
+  {
+    "id": "rose",
+    "name": "Gül (Rose)",
+    "coins": 1,
+    "action": "drift",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp",
+    "localPath": "images/gifts/rose.webp"
+  },
+  {
+    "id": "rosa",
+    "name": "Rosa (5 TL)",
+    "coins": 10,
+    "action": "motor",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eb77ead5c3abb6da6034d3cf6cfeb438~tplv-obj.webp",
+    "localPath": "images/gifts/rosa.webp"
+  },
+  {
+    "id": "heart",
+    "name": "Kalp (Heart)",
+    "coins": 10,
+    "action": "wheelie",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/dd300fd35a757d751301fba862a258f1~tplv-obj.webp",
+    "localPath": "images/gifts/heart.webp"
+  },
+  {
+    "id": "fire",
+    "name": "Ateş (Fire)",
+    "coins": 5,
+    "action": "burnout",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/687759237d5a115183ae45fa7520b925.png~tplv-obj.webp",
+    "localPath": "images/gifts/fire.webp"
+  },
+  {
+    "id": "sunglasses",
+    "name": "Gözlük (Neon)",
+    "coins": 199,
+    "action": "neon",
+    "url": "https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/08af67ab13a8053269bf539fd27f3873.png~tplv-obj.webp",
+    "localPath": "images/gifts/sunglasses.webp"
+  },
+  {
+    "id": "swan",
+    "name": "Kuğu (Gelin Ol)",
+    "coins": 699,
+    "action": "bride",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/97a26919dbf6afe262c97e22a83f4bf1~tplv-obj.webp",
+    "localPath": "images/gifts/swan.webp"
+  },
+  {
+    "id": "crown",
+    "name": "Taç (Gelin Ol)",
+    "coins": 199,
+    "action": "bride",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/3070d46dd3a4ab39c24f094e14996784.png~tplv-obj.webp",
+    "localPath": "images/gifts/crown.webp"
+  },
+  {
+    "id": "tiara",
+    "name": "Feather Tiara (Gelin Ol)",
+    "coins": 149,
+    "action": "bride",
+    "url": "https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/resource/23a0d8c3317d8be5e5a63488a7b2b8c4.png~tplv-obj.webp",
+    "localPath": "images/gifts/tiara.webp"
+  },
+  {
+    "id": "wedding",
+    "name": "Düğün (Gelin Ol)",
+    "coins": 1500,
+    "action": "bride",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/0115cb20f6629dc50d39f6b747bddf73~tplv-obj.webp",
+    "localPath": "images/gifts/wedding.webp"
+  },
+  {
+    "id": "lion",
+    "name": "Aslan (Damat Ol)",
+    "coins": 500,
+    "action": "groom",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/44818035acbbe673514caa600755268c~tplv-obj.webp",
+    "localPath": "images/gifts/lion.webp"
+  },
+  {
+    "id": "prince",
+    "name": "Prens (Damat Ol)",
+    "coins": 500,
+    "action": "groom",
+    "url": "https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/resource/ea1fc9cb68514ec3c844179c6f09e8de.png~tplv-obj.webp",
+    "localPath": "images/gifts/prince.webp"
+  },
+  {
+    "id": "galaxy",
+    "name": "Galaksi (Konvoy Coşkusu)",
+    "coins": 1000,
+    "action": "galaxy",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp",
+    "localPath": "images/gifts/galaxy.webp"
+  },
+  {
+    "id": "universe",
+    "name": "TikTok Universe",
+    "coins": 44999,
+    "action": "universe",
+    "url": "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp",
+    "localPath": "images/gifts/universe.webp"
+  }
+]

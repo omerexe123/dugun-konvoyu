@@ -1,0 +1,68 @@
+[
+  {
+    "id": "dugun_erik_dali",
+    "url": "audio/music/dugun_erik_dali.mp3",
+    "title": "Ömer Faruk Bostan - Erik Dalı",
+    "category": "Düğün / Oyun Havası"
+  },
+  {
+    "id": "dugun_halay_potpori",
+    "url": "audio/music/dugun_halay_potpori.mp3",
+    "title": "Coşkulu Davul Zurna & Halay Potpori",
+    "category": "Düğün / Halay"
+  },
+  {
+    "id": "dugun_ankara_kostak",
+    "url": "audio/music/dugun_ankara_kostak.mp3",
+    "title": "Ankara Oyun Havası (Kostak & Fidayda)",
+    "category": "Düğün / Ankara Havası"
+  },
+  {
+    "id": "dugun_ismail_yk_8080",
+    "url": "audio/music/dugun_ismail_yk_8080.mp3",
+    "title": "İsmail YK - 80 80 160 (Düğün Mix)",
+    "category": "Düğün / Oyun Havası"
+  },
+  {
+    "id": "pop_tarkan_yolla",
+    "url": "audio/music/pop_tarkan_yolla.mp3",
+    "title": "Tarkan - Yolla",
+    "category": "Türkçe Pop"
+  },
+  {
+    "id": "pop_cagla_saz_mi_caz_mi",
+    "url": "audio/music/pop_cagla_saz_mi_caz_mi.mp3",
+    "title": "Çağla - Saz Mı Caz Mı",
+    "category": "Türkçe Pop"
+  },
+  {
+    "id": "pop_simge_askin_olayim",
+    "url": "audio/music/pop_simge_askin_olayim.mp3",
+    "title": "Simge - Aşkın Olayım",
+    "category": "Türkçe Pop"
+  },
+  {
+    "id": "pop_cevapsiz_cinlama",
+    "url": "audio/music/pop_cevapsiz_cinlama.mp3",
+    "title": "Aleyna Tilki & Emrah Karaduman - Cevapsız Çınlama",
+    "category": "Türkçe Pop"
+  },
+  {
+    "id": "piyasa_ceza_yerli_plaka",
+    "url": "audio/music/piyasa_ceza_yerli_plaka.mp3",
+    "title": "Ceza - Yerli Plaka (Cadde & Drift)",
+    "category": "Piyasa / Hip-Hop"
+  },
+  {
+    "id": "piyasa_ben_fero_demet",
+    "url": "audio/music/piyasa_ben_fero_demet.mp3",
+    "title": "Ben Fero - Demet Akalın (Piyasa Trap)",
+    "category": "Piyasa / Trap"
+  },
+  {
+    "id": "piyasa_drift_phonk",
+    "url": "audio/music/piyasa_drift_phonk.mp3",
+    "title": "Kontraa - Aggressive Drift Phonk",
+    "category": "Piyasa / Drift Phonk"
+  }
+]

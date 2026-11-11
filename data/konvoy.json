@@ -1,0 +1,102 @@
+{
+  "convoyName": "Bizim Düğün Konvoyu",
+  "brideName": "Gözde_TikTok",
+  "groomName": "Caner_M5",
+  "brideId": "real_tiktok_user",
+  "groomId": "caner_v8",
+  "users": {
+    "undefined": {
+      "uniqueId": "undefined",
+      "nickname": "undefined",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=undefined",
+      "points": 2,
+      "tier": 1,
+      "vehicleType": "car",
+      "motorTier": 2,
+      "carName": "VW Golf GTI 2025",
+      "likesSent": 1,
+      "lastActive": 1794330772522
+    },
+    "mehmet_drift": {
+      "uniqueId": "mehmet_drift",
+      "nickname": "Mehmet_Drift",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=mehmet_drift",
+      "points": 11,
+      "tier": 1,
+      "vehicleType": "car",
+      "motorTier": 3,
+      "carName": "VW Golf GTI 2025",
+      "likesSent": 0,
+      "lastActive": 1794332512929
+    },
+    "ayse_motor": {
+      "uniqueId": "ayse_motor",
+      "nickname": "Ayşe_R1",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=ayse_motor",
+      "points": 26,
+      "tier": 8,
+      "vehicleType": "motor",
+      "motorTier": 1,
+      "carName": "Yamaha YZF-R1 Superbike",
+      "likesSent": 0,
+      "lastActive": 1794332512942
+    },
+    "caner_v8": {
+      "uniqueId": "caner_v8",
+      "nickname": "Caner_M5",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=caner_v8",
+      "points": 61,
+      "tier": 3,
+      "vehicleType": "car",
+      "motorTier": 4,
+      "carName": "VW Jetta GLI",
+      "likesSent": 60,
+      "lastActive": 1794332512964
+    },
+    "real_tiktok_user": {
+      "uniqueId": "real_tiktok_user",
+      "nickname": "Gözde_TikTok",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=real_tiktok_user",
+      "points": 31,
+      "tier": 2,
+      "vehicleType": "car",
+      "motorTier": 1,
+      "carName": "VW Polo Sedan",
+      "likesSent": 30,
+      "lastActive": 1794342619228
+    },
+    "tiktok_pro_user": {
+      "uniqueId": "tiktok_pro_user",
+      "nickname": "TikTok_Reis",
+      "avatar": "/api/avatar-proxy?url=https%3A%2F%2Fp16-common-sign.tiktokcdn.com%2Ftos-alisg-avt-0068%2F7186401b7e7e9c1c67bce6f284d10f3a~tplv-tiktokx-cropcenter%3A100%3A100.webp%3Fdr%3D14579%26refresh_token%3D479c95ba%26x-expires%3D1794502800%26x-signature%3DcB6zANWo6WjoIbmIVRxJ1HCB8sA%253D%26t%3D4d5b0474%26ps%3D13740610%26shp%3Da5d48078%26shcp%3Dfdd36af4%26idc%3Dmy&seed=tiktok_pro_user",
+      "points": 31,
+      "tier": 2,
+      "vehicleType": "car",
+      "motorTier": 1,
+      "carName": "VW Polo Sedan",
+      "likesSent": 30,
+      "lastActive": 1794347000239
+    },
+    "test_1coin": {
+      "uniqueId": "test_1coin",
+      "nickname": "1Coin_Kral",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=test_1coin",
+      "points": 16,
+      "tier": 1,
+      "vehicleType": "car",
+      "motorTier": 1,
+      "carName": "VW Golf GTI 2025",
+      "likesSent": 0,
+      "lastActive": 1794377273820
+    }
+  },
+  "stats": {
+    "totalGifts": 25,
+    "totalLikes": 237,
+    "totalHonks": 7,
+    "totalOvertakes": 0,
+    "totalDrifts": 9,
+    "totalBurnouts": 5,
+    "totalWheelies": 7
+  }
+}

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Düğün Konvoyu" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png" />
+  <link rel="apple-touch-icon" href="/images/icon-192.png" />
+  <title>Düğün Konvoyu – TikTok Canlı Yayın 3D Oyunu</title>
+  <link rel="stylesheet" href="css/style.css?v=25" />
+</head>
+<body>
+  <!-- 3D Three.js Sahnesi -->
+  <div id="canvas-container"></div>
+
+  <!-- 3D Araç Etiketleri Katmanı -->
+  <div id="labels-container"></div>
+
+  <!-- Üst Orta: Canlı Yayın & Hediye Rozetleri (HUD) -->
+  <header class="wedding-hud-wrapper">
+    <div class="wedding-hud">
+      <div class="hud-gift-legend">
+        <div class="gift-badge-item badge-like" title="Çift Tıkla / Beğen Konvoya Katıl ve Öne Geç">
+          <span class="gift-badge-icon" style="font-size: 26px; text-align: center; line-height: 38px; display: inline-flex;">❤️</span>
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">BEĞEN KATIL</span>
+            <span class="gift-badge-cost">1❤️ = 1 Puan</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-bride">
+          <img src="images/gifts/perfume.webp" class="gift-badge-icon" alt="Perfume" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">GELİN OL</span>
+            <span class="gift-badge-cost">1x Perfume (20🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-groom">
+          <img src="images/gifts/hat_mustache.webp" class="gift-badge-icon" alt="Hat and Mustache" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">DAMAT OL</span>
+            <span class="gift-badge-cost">1x Hat/Mustache (99🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-drift">
+          <img src="images/gifts/rose.webp" class="gift-badge-icon" alt="Rose" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">DRİFT AT</span>
+            <span class="gift-badge-cost">1x Rose (1🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-motor">
+          <img src="images/gifts/gg.webp" class="gift-badge-icon" alt="GG" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">MOTORLA ÇIK</span>
+            <span class="gift-badge-cost">1x GG (1🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-neon">
+          <img src="images/gifts/tiktok.webp" class="gift-badge-icon" alt="TikTok" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">ALTA NEON</span>
+            <span class="gift-badge-cost">1x TikTok (1🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-burnout">
+          <img src="images/gifts/cake_slice.webp" class="gift-badge-icon" alt="Cake Slice" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">LASTİK YAK</span>
+            <span class="gift-badge-cost">1x Cake Slice (1🪙)</span>
+          </div>
+        </div>
+        <div class="gift-badge-item badge-wheelie">
+          <img src="images/gifts/ice_cream.webp" class="gift-badge-icon" alt="Ice Cream Cone" />
+          <div class="gift-badge-text">
+            <span class="gift-badge-title">TEK TEKER</span>
+            <span class="gift-badge-cost">1x Ice Cream (1🪙)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="hud-leader-box" class="hud-leader-badge">
+      <span>👑</span> Gelin arabasının arkasında: <b id="hud-leader-name">Konvoy Lideri</b>
+    </div>
+  </header>
+
+  <!-- Üst Olay Bildirim Banner'ı -->
+  <div id="event-banner" class="event-banner"></div>
+
+  <!-- Canlı Çalan Müzik HUD Widget (Düğün & Pop & Piyasa) -->
+  <div id="hud-now-playing" class="hud-now-playing">
+    <div class="hud-music-eq playing">
+      <span class="eq-bar bar-1"></span>
+      <span class="eq-bar bar-2"></span>
+      <span class="eq-bar bar-3"></span>
+      <span class="eq-bar bar-4"></span>
+    </div>
+    <div class="hud-music-meta">
+      <span class="hud-music-cat" id="hud-music-cat">Düğün / Oyun Havası</span>
+      <span class="hud-music-title" id="hud-music-title">Ömer Faruk Bostan - Erik Dalı</span>
+    </div>
+  </div>
+
+  <!-- Mobil Panel Aç/Kapat Butonu -->
+  <button id="btn-toggle-panel" class="btn-mobile-toggle" aria-label="Ayarlar">
+    ⚙️
+  </button>
+
+  <!-- Yayıncı Kontrol Paneli -->
+  <aside class="control-panel">
+    <header class="panel-header">
+      <div class="panel-title">
+        <span>🚗💨</span> Düğün Konvoyu
+      </div>
+      <button id="btn-mute" class="btn" style="padding: 4px 8px; font-size: 11px; background: rgba(255,255,255,0.1); color: #fff;">
+        🔊 Ses Açık
+      </button>
+    </header>
+
+    <div class="panel-body">
+      <!-- 1. Canlı TikTok Bağlantısı -->
+      <section class="panel-section">
+        <span class="section-label">Canlı TikTok Bağlantısı</span>
+        <div class="connect-box">
+          <input
+            type="text"
+            id="tiktok-username"
+            class="text-input"
+            placeholder="TikTok Kullanıcı Adı (@kullanici...)"
+          />
+          <button id="btn-connect" class="btn">Bağlan</button>
+          <button id="btn-disconnect" class="btn btn-danger" style="display: none;">Kopart</button>
+        </div>
+        <div id="connection-status" class="status-pill disconnected">
+          🔴 Bağlantı Yok
+        </div>
+      </section>
+
+      <!-- 2. Kamera Açısı Seçici -->
+      <section class="panel-section">
+        <span class="section-label">Kamera Açısı (Kısayol: 0-7 Tuşları)</span>
+        <select id="camera-select" class="select-input">
+          <option value="0" selected>0: 🎥 Otomatik Yönetmen (Hediye Takip & Gezinme)</option>
+          <option value="1">1: Standart Konvoy Takip (İzometrik)</option>
+          <option value="2">2: Gelin Arabası Ön Sinematik</option>
+          <option value="3">3: Helikopter / Kuşbakışı</option>
+          <option value="4">4: Yol Kenarı Dron / Radar</option>
+          <option value="5">5: Aksiyon / Odak Takip</option>
+          <option value="6">6: Kaput / Tampon Kamerası</option>
+          <option value="7">7: Serbest Orbit (Fareyle Döndür)</option>
+        </select>
+      </section>
+
+      <!-- 3. Gün / Gece (Aydınlık / Karanlık) Döngüsü -->
+      <section class="panel-section">
+        <span class="section-label">Aydınlatma & Hava (Kısayol: L Tuşu)</span>
+        <div class="daynight-controls" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+          <button class="btn btn-time active-time" data-time="auto" style="font-size: 11px; padding: 6px 2px; background: rgba(56,189,248,0.25); border: 1px solid #38bdf8; color: #e0f2fe;">🔄 Döngü</button>
+          <button class="btn btn-time" data-time="day" style="font-size: 11px; padding: 6px 2px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1;">☀️ Gündüz</button>
+          <button class="btn btn-time" data-time="sunset" style="font-size: 11px; padding: 6px 2px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1;">🌅 Akşam</button>
+          <button class="btn btn-time" data-time="night" style="font-size: 11px; padding: 6px 2px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1;">🌙 Gece</button>
+        </div>
+      </section>
+
+      <!-- 4. Konvoy Radyosu (Düğün, Pop & Piyasa Müzikleri) -->
+      <section class="panel-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span class="section-label" style="margin-bottom: 0;">📻 Konvoy Radyosu</span>
+          <button id="btn-music-toggle" class="btn" style="padding: 3px 8px; font-size: 11px; background: rgba(56,189,248,0.25); border: 1px solid #38bdf8; color: #e0f2fe;">
+            ▶️ Müzik Başlat
+          </button>
+        </div>
+
+        <div class="now-playing-box">
+          <div class="now-playing-category" id="music-track-category">Düğün / Oyun Havası</div>
+          <div class="now-playing-title" id="music-track-title">Ömer Faruk Bostan - Erik Dalı</div>
+        </div>
+
+        <div class="music-controls-row" style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+          <button id="btn-music-prev" class="btn" style="flex: 1; padding: 5px 2px; font-size: 11px;">⏮️ Geri</button>
+          <button id="btn-music-next" class="btn" style="flex: 1; padding: 5px 2px; font-size: 11px;">⏭️ İleri</button>
+          <select id="music-select" class="select-input" style="flex: 2; font-size: 11px; padding: 4px 6px;"></select>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-bottom: 4px;">
+          <span>🎵 Müzik Sesi:</span>
+          <input type="range" id="music-volume" min="0" max="100" value="50" style="width: 140px; accent-color: #38bdf8;">
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #94a3b8;">
+          <span>📢 Efekt Sesi (SFX):</span>
+          <input type="range" id="sfx-volume" min="0" max="100" value="75" style="width: 140px; accent-color: #f59e0b;">
+        </div>
+      </section>
+
+      <!-- 4. Hediye & Kural Kılavuzu -->
+      <section class="panel-section gift-guide-section">
+        <span class="section-label">TikTok Canlı Hediye Kuralları</span>
+        <div class="gift-rules-list">
+          <div class="rule-item">
+            <span class="rule-badge badge-rose">🌹 Gül (1 Jeton)</span>
+            <span class="rule-desc">Yanlama & Efsane Drift</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge badge-motor">🏍️ Kalp / Asa (~5 TL)</span>
+            <span class="rule-desc">3D Sürücülü Motosiklet & Tek Teker</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge badge-smoke">💨 Çörek / Ara Gazı</span>
+            <span class="rule-desc">Asfaltı Kazıyan Lastik Yakma (Burnout)</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge badge-like">❤️ Beğeni (Çift Tık)</span>
+            <span class="rule-desc">Otomatik Konvoya Katılma & İlerleme</span>
+          </div>
+          <div class="rule-item">
+            <span class="rule-badge badge-lead">👑 En Çok Hediye Atan</span>
+            <span class="rule-desc">Siyah Mercedes Gelin & Damat Koltuğu</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Canlı Olay Akışı -->
+      <section class="panel-section">
+        <span class="section-label">Konvoy Akışı</span>
+        <div id="live-logs" class="log-box"></div>
+      </section>
+
+      <!-- 5. Simülasyon Paneli -->
+      <section class="panel-section">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="section-label">Konvoy Simülatörü</span>
+          <button id="btn-auto-demo" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 11px; padding: 4px 8px;">
+            🤖 Otomatik Demo
+          </button>
+        </div>
+        <input
+          type="text"
+          id="sim-username"
+          class="text-input"
+          placeholder="Hedef Kullanıcı"
+          value="Damat_Adayi"
+          style="margin-bottom: 6px;"
+        />
+        <div class="sim-grid">
+          <button class="sim-btn" data-sim="join">
+            <span>🚗</span> <b>Konvoya Katıl</b>
+          </button>
+          <button class="sim-btn" data-sim="rose" style="border-color: #f43f5e; background: rgba(244,63,94,0.12);">
+            <img src="images/gifts/rose.webp" class="sim-gift-icon" alt="" /> <b>Gül Drifti (1🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="motor" style="border-color: #10b981; background: rgba(16,185,129,0.12);">
+            <img src="images/gifts/rosa.webp" class="sim-gift-icon" alt="" /> <b>5 TL Motor (10🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="wheelie" style="border-color: #fbbf24; background: rgba(251,191,36,0.12);">
+            <img src="images/gifts/heart.webp" class="sim-gift-icon" alt="" /> <b>Tek Teker (10🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="burnout" style="border-color: #f97316; background: rgba(249,115,22,0.12);">
+            <img src="images/gifts/fire.webp" class="sim-gift-icon" alt="" /> <b>Lastik Yak (5🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="neon" style="border-color: #06b6d4; background: rgba(6,182,212,0.15); color: #67e8f9;">
+            <img src="images/gifts/sunglasses.webp" class="sim-gift-icon" alt="" /> <b>Alt Neon (199🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="bride" style="border-color: #ec4899; background: rgba(236,72,153,0.15); color: #fbcfe8;">
+            <img src="images/gifts/swan.webp" class="sim-gift-icon" alt="" /> <b>Kuğu / Gelin Ol (699🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="groom" style="border-color: #3b82f6; background: rgba(59,130,246,0.15); color: #93c5fd;">
+            <img src="images/gifts/lion.webp" class="sim-gift-icon" alt="" /> <b>Aslan / Damat Ol (500🪙)</b>
+          </button>
+          <button class="sim-btn" data-sim="honk">
+            <span>📣</span> <b>Düğün Kornası</b>
+          </button>
+          <button class="sim-btn" data-sim="selektor" style="border-color: #38bdf8; background: rgba(56,189,248,0.15); color: #e0f2fe;">
+            <span>💡⚡</span> <b>Selektör Çak (F)</b>
+          </button>
+          <button class="sim-btn" data-sim="overtake">
+            <span>🔥💨</span> <b>Makas At</b>
+          </button>
+          <button class="sim-btn" data-sim="like">
+            <span>❤️</span> <b>Beğeni (+30)</b>
+          </button>
+          <button class="sim-btn" data-sim="galaxy" style="grid-column: span 2; border-color: #fbbf24; background: rgba(251,191,36,0.15);">
+            <img src="images/gifts/galaxy.webp" class="sim-gift-icon" alt="" /> <b>Galaksi Şöleni (1000🪙)</b>
+          </button>
+        </div>
+      </section>
+
+      <button id="btn-reset" class="btn btn-danger" style="margin-top: 8px;">
+        🗑️ Konvoyu Sıfırla
+      </button>
+    </div>
+  </aside>
+
+  <!-- Scriptler -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
+  <script src="js/audio.js?v=19"></script>
+  <script src="js/cars.js?v=19"></script>
+  <script src="js/highway.js?v=19"></script>
+  <script src="js/convoy.js?v=19"></script>
+  <script src="js/app.js?v=21"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

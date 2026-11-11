@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Model Diagnostics</title>
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/GLTFLoader.js"></script>
+  <style>
+    body { background: #0b0f19; color: #fff; font-family: sans-serif; margin: 0; padding: 10px; }
+    h2 { margin: 5px 0; font-size: 16px; color: #38bdf8; }
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px; text-align: center; }
+    .card h4 { margin: 2px 0 6px; font-size: 12px; color: #f1f5f9; }
+    canvas { width: 100%; height: 160px; display: block; border-radius: 4px; background: #0f172a; }
+  </style>
+</head>
+<body>
+  <h2>Model Orientation Checker: Green Arrow = Highway Forward (-Z), Red Arrow = Tail (+Z)</h2>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const models = [
+      { id: 'gelin', file: 'models/mercedes-_benz_w206_c220.glb', name: 'Gelin Mercedes C220' },
+      { id: 'tier1', file: 'models/volkswagen_golf_gti_2025.glb', name: '1. Golf GTI 2025' },
+      { id: 'tier2', file: 'models/2017_volkswagen_polo_sedan.glb', name: '2. Polo Sedan 2017' },
+      { id: 'tier3', file: 'models/volkswagen_jetta_gli_2025.glb', name: '3. Jetta GLI 2025' },
+      { id: 'tier4', file: 'models/volkswagen_virtus_2026.glb', name: '4. Virtus 2026' },
+      { id: 'tier5', file: 'models/bmw_335i.glb', name: '5. BMW 335i' },
+      { id: 'tier6', file: 'models/honda_s2000_ultimate_edition.glb', name: '6. Honda S2000' },
+      { id: 'tier7', file: 'models/mercedes_a45s_amg_sedan.glb', name: '7. Mercedes A45S AMG' },
+      { id: 'tier8', file: 'models/bmw_m5_e39.glb', name: '8. BMW M5 E39' },
+      { id: 'tier9', file: 'models/bmw_x7_m60i.glb', name: '9. BMW X7 M60i' },
+      { id: 'tier10', file: 'models/2024_mercedes_benz_eqs_580.glb', name: '10. Mercedes EQS 580' },
+      { id: 'mot1', file: 'models/2022_yamaha_r1.glb', name: 'M1. Yamaha R1' },
+      { id: 'mot2', file: 'models/kawasaki_ninja_zx-6r.glb', name: 'M2. Kawasaki Ninja ZX6R' },
+      { id: 'mot3', file: 'models/bajaj_pulsar_200fs_concept.glb', name: 'M3. Pulsar 200FS' },
+      { id: 'mot4', file: 'models/honda_twister_300.glb', name: 'M4. Twister 300' }
+    ];
+
+    const loader = new THREE.GLTFLoader();
+    const grid = document.getElementById('grid');
+
+    async function run() {
+      for (const m of models) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h4>${m.name}</h4><canvas id="c-${m.id}"></canvas>`;
+        grid.appendChild(card);
+
+        const canvas = document.getElementById(`c-${m.id}`);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(300, 160);
+
+        const scene = new THREE.Scene();
+        // Camera: elevated side-rear view (X=4, Y=4, Z=5) looking at center (0, 0.5, 0)
+        // With this angle:
+        // Green arrow points to -Z (Forward / Top-Left of canvas).
+        // Red arrow points to +Z (Rear / Bottom-Right of canvas).
+        const camera = new THREE.PerspectiveCamera(40, 300 / 160, 0.1, 100);
+        camera.position.set(4.5, 3.8, 4.5);
+        camera.lookAt(0, 0.4, 0);
+
+        const light1 = new THREE.DirectionalLight(0xffffff, 1.4);
+        light1.position.set(5, 10, 7);
+        scene.add(light1);
+        const light2 = new THREE.DirectionalLight(0x93c5fd, 0.8);
+        light2.position.set(-5, 5, -7);
+        scene.add(light2);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+        // Arrows: Green for -Z (Forward down highway), Red for +Z (Tail)
+        const forwardArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0.05, 0), 2.8, 0x22c55e, 0.5, 0.25);
+        scene.add(forwardArrow);
+        const rearArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0.05, 0), 2.8, 0xef4444, 0.5, 0.25);
+        scene.add(rearArrow);
+
+        await new Promise(res => {
+          loader.load(m.file, gltf => {
+            const rawScene = gltf.scene;
+            const clone = rawScene.clone(true);
+
+            let box = new THREE.Box3().setFromObject(clone);
+            let size = new THREE.Vector3();
+            box.getSize(size);
+
+            if (size.x > size.z * 1.25) {
+              clone.rotation.y = Math.PI / 2;
+              box.setFromObject(clone);
+              box.getSize(size);
+            }
+
+            // Current implementation: clone.rotation.y += Math.PI
+            clone.rotation.y += Math.PI;
+
+            box.setFromObject(clone);
+            box.getSize(size);
+            const targetL = m.id.startsWith('mot') ? 2.2 : 4.6;
+            const s = targetL / (size.z || 1);
+            clone.scale.set(s, s, s);
+
+            box.setFromObject(clone);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            clone.position.x -= center.x;
+            clone.position.z -= center.z;
+            clone.position.y -= box.min.y;
+
+            scene.add(clone);
+            renderer.render(scene, camera);
+            res();
+          }, undefined, () => res());
+        });
+      }
+      window.__ALL_LOADED__ = true;
+    }
+
+    run();
+  </script>
+</body>
+</html>
