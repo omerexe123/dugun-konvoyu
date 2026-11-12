@@ -102,34 +102,16 @@ function saveState(immediate = false) {
 
 loadState();
 
-// En çok hediye atan Damat ve Gelin (Biri kız, biri erkek / en çok atan 2 kişi)
-function recalculateWeddingCouples() {
-  const sorted = Object.values(gameState.users).sort((a, b) => b.points - a.points);
-  let changed = false;
+// Gelin/Damat koltuğu SADECE hediyeyle alınır (Perfume -> Gelin, Hat & Mustache -> Damat).
+// Puan sıralamasıyla otomatik atama YOK.
 
-  if (sorted.length > 0 && sorted[0].points >= 20) {
-    if (gameState.groomId !== sorted[0].uniqueId) {
-      gameState.groomName = sorted[0].nickname;
-      gameState.groomId = sorted[0].uniqueId;
-      changed = true;
-    }
-  }
+// Beğeniyle motora geçiş eşiği (toplam beğeni sayısı)
+const MOTOR_LIKE_THRESHOLD = 100;
 
-  if (sorted.length > 1 && sorted[1].points >= 20) {
-    if (gameState.brideId !== sorted[1].uniqueId) {
-      gameState.brideName = sorted[1].nickname;
-      gameState.brideId = sorted[1].uniqueId;
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    broadcast('EVENT_COUPLE_UPDATE', {
-      brideName: gameState.brideName,
-      groomName: gameState.groomName,
-      message: `👰🤵 GELİN & DAMAT ARABASI GÜNCELLENDİ: ${gameState.brideName} ❤️ ${gameState.groomName}`
-    });
-  }
+function switchToMotor(user) {
+  user.vehicleType = 'motor';
+  user.motorTier = 1;
+  user.carName = MOTOR_TIERS[0].name;
 }
 
 function getOrCreateConvoyUser(uniqueId, nickname = '', avatar = '', vehicleType = 'car') {
@@ -162,7 +144,6 @@ function getOrCreateConvoyUser(uniqueId, nickname = '', avatar = '', vehicleType
     };
     gameState.users[uniqueId] = newUser;
     saveState();
-    recalculateWeddingCouples();
     return newUser;
   } else {
     if (nickname && nickname !== 'undefined') gameState.users[uniqueId].nickname = nickname;
@@ -472,8 +453,14 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
   const isNew = !gameState.users[uniqueId];
   const user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
 
-  user.likesSent = (user.likesSent || 0) + count;
+  const prevLikes = user.likesSent || 0;
+  user.likesSent = prevLikes + count;
   gameState.stats.totalLikes += count;
+
+  // Beğeni eşiği aşıldıysa araçtan motora terfi (sadece bir kez, eşik geçişinde)
+  const unlockedMotor = user.vehicleType !== 'motor' &&
+    prevLikes < MOTOR_LIKE_THRESHOLD && user.likesSent >= MOTOR_LIKE_THRESHOLD;
+  if (unlockedMotor) switchToMotor(user);
 
   const sorted = getSortedConvoy();
   const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
@@ -491,15 +478,22 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
 
   // Her beğeni anında puan kazandırır ve konvoyda öne taşır!
   addPointsToConvoyUser(user, count, `${count} Beğeni`);
+
+  if (unlockedMotor) {
+    const newRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
+    broadcast('EVENT_MOTOR_SPAWN', {
+      user,
+      rankIdx: Math.max(0, newRank),
+      message: `🏍️❤️ ${user.nickname} ${MOTOR_LIKE_THRESHOLD} BEĞENİYE ULAŞTI, MOTORA TERFİ ETTİ!`
+    });
+  }
 }
 
 function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar, 'motor');
 
-  user.vehicleType = 'motor';
-  user.motorTier = 1;
-  user.carName = MOTOR_TIERS[0].name;
+  switchToMotor(user);
   user.points += 25;
   saveState();
 
@@ -529,7 +523,6 @@ function addPointsToConvoyUser(user, pointsToAdd, reason = '') {
   }
 
   saveState();
-  recalculateWeddingCouples();
 
   const sorted = getSortedConvoy();
   const newRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
@@ -639,14 +632,14 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 4. KURAL: GG (1🪙) -> ÖZEL MOTOSİKLET İLE KONVOYA ÇIKMA
+  // 4. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
   if (gName.includes('gg') || gName.includes('motor')) {
-    user.vehicleType = 'motor';
-    user.motorTier = 1;
-    user.carName = MOTOR_TIERS[0].name;
+    switchToMotor(user);
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
+    const ggRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
     broadcast('EVENT_MOTOR_SPAWN', {
       user,
+      rankIdx: Math.max(0, ggRank),
       giftIcon: 'images/gifts/gg.webp',
       message: `🏍️💨 ${user.nickname} GG (1🪙) İLE ÖZEL MOTORUYLA KONVOYA FIRLADI!`
     });

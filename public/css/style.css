@@ -355,7 +355,6 @@ body {
   flex-direction: column;
   align-items: center;
   pointer-events: none;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.85));
   animation: plateFloat 2.2s ease-in-out infinite alternate;
   will-change: transform;
 }
@@ -386,7 +385,7 @@ body {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  background: #1e293b;
+  background: transparent;
   display: block;
 }
 
@@ -424,19 +423,21 @@ body {
 
 /* 2. Dairenin Hemen Altında Kullanıcı İsmi */
 .plate-nick-tag {
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: transparent;
   color: #ffffff;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: -0.01em;
-  padding: 3px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 0 8px;
+  border: none;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+  /* Şeffaf zeminde okunabilirlik: kontur + yumuşak gölge */
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.85),
+     1px -1px 0 rgba(0, 0, 0, 0.85),
+    -1px  1px 0 rgba(0, 0, 0, 0.85),
+     1px  1px 0 rgba(0, 0, 0, 0.85),
+     0 2px 6px rgba(0, 0, 0, 0.7);
   max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -444,15 +445,11 @@ body {
 }
 
 .plate-lead .plate-nick-tag {
-  border-color: rgba(251, 191, 36, 0.8);
   color: #fef08a;
-  background: rgba(26, 19, 7, 0.96);
 }
 
 .plate-motor .plate-nick-tag {
-  border-color: rgba(56, 189, 248, 0.8);
   color: #e0f2fe;
-  background: rgba(8, 25, 43, 0.96);
 }
 
 /* 3. Kompakt Araç & Puan Bilgisi */
@@ -463,10 +460,14 @@ body {
   border-radius: 9999px;
   margin-top: 2px;
   white-space: nowrap;
-  background: rgba(10, 14, 23, 0.92);
-  color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  color: #e2e8f0;
+  border: none;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.8),
+     1px -1px 0 rgba(0, 0, 0, 0.8),
+    -1px  1px 0 rgba(0, 0, 0, 0.8),
+     1px  1px 0 rgba(0, 0, 0, 0.8);
 }
 
 .badge-lead-sub {
@@ -485,7 +486,8 @@ body {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid rgba(15, 23, 42, 0.96);
+  border-top: 6px solid rgba(255, 255, 255, 0.85);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
   margin-top: 2px;
 }
 
