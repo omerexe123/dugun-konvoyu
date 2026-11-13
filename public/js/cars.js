@@ -77,16 +77,19 @@ const CarFactory = {
         f,
         gltf => {
           this.gltfCache[f] = gltf.scene;
+          this.queueTexturesForUpload(gltf.scene);
           loaded++;
           pump();
           // Model yüklenir yüklenmez bekletmeden anında sahneyi güncelle
           // Tüm arabaları her modelde baştan kurmak yerine toplu (debounce) yenile
           clearTimeout(this._reloadTimer);
-          this._reloadTimer = setTimeout(() => {
+          const doReload = () => {
+            if (this._texPumping) { this._reloadTimer = setTimeout(doReload, 200); return; }
             if (window.convoy && typeof window.convoy.reloadAllCars === 'function') {
               window.convoy.reloadAllCars();
             }
-          }, 400);
+          };
+          this._reloadTimer = setTimeout(doReload, 400);
           if (loaded === fileList.length) {
             this.isLoaded = true;
             this.isLoading = false;
@@ -109,6 +112,32 @@ const CarFactory = {
     pump();
   },
 
+  // Büyük GLB dokularını GPU'ya kare başına 1 adet yükle (araç ilk göründüğünde oluşan donmayı engeller, kalite aynı)
+  _texQueue: [],
+  _texPumping: false,
+  queueTexturesForUpload(scene) {
+    const seen = new Set();
+    scene.traverse(ch => {
+      if (!ch.isMesh || !ch.material) return;
+      (Array.isArray(ch.material) ? ch.material : [ch.material]).forEach(m => {
+        ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'alphaMap'].forEach(k => {
+          const t = m[k];
+          if (t && !seen.has(t)) { seen.add(t); this._texQueue.push(t); }
+        });
+      });
+    });
+    if (this._texPumping) return;
+    this._texPumping = true;
+    const step = () => {
+      const t = this._texQueue.shift();
+      if (t && window.renderer && typeof window.renderer.initTexture === 'function') {
+        try { window.renderer.initTexture(t); } catch (e) { /* yoksay */ }
+      }
+      if (this._texQueue.length > 0) requestAnimationFrame(step);
+      else this._texPumping = false;
+    };
+    requestAnimationFrame(step);
+  },
   // Kernel seviyesinde evrensel GLB Bounding Box ve Yön Düzelticisi
   normalizeModel(rawScene, targetL, isMotor = false, explicitRotY = Math.PI) {
     const clone = rawScene.clone(true);
