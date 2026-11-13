@@ -36,17 +36,35 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 1. Sonsuz Şehir Zemin Tabanı (Karanlık Ufuk Düzlemi)
+  // 1. Sonsuz Şehir Zemin Tabanı & Kesintisiz Asfalt Altlığı (Sıfır Mavi Boşluk)
   // -------------------------------------------------------------
   initRoad() {
-    // Şehir modelinin altında derin karanlık taban
+    // 1. Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x090d16 });
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x141820,
+      roughness: 0.9,
+      metalness: 0.05
+    });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.35;
+    groundMesh.position.y = -0.08;
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
+
+    // 2. Ana cadde koridoru boyunca kesintisiz asfalt altlık bandı (36m genişlik, 1200m uzunluk)
+    // Şehir blokları arasındaki veya kavşaklardaki olası her türlü mavi/açık renk boşluğu yok eder!
+    const roadBandGeo = new THREE.PlaneGeometry(36, 1200);
+    roadBandGeo.rotateX(-Math.PI / 2);
+    const roadBandMat = new THREE.MeshStandardMaterial({
+      color: 0x181b22,
+      roughness: 0.85,
+      metalness: 0.08
+    });
+    const roadBandMesh = new THREE.Mesh(roadBandGeo, roadBandMat);
+    roadBandMesh.position.y = -0.01; // Asfaltın tam 1cm altında emniyet tabakası
+    roadBandMesh.receiveShadow = true;
+    this.scene.add(roadBandMesh);
   }
 
   // -------------------------------------------------------------
@@ -99,24 +117,23 @@ class HighwayEngine {
 
   setupCityBlocks(baseScene) {
     // beautiful_city.glb model analiz parametreleri:
-    // Orijinal modelde cadde X ekseni boyunca uzanır, genişlik Z eksenidir.
+    // Model içindeki asfalt meşleri X: [-11.96, 3.60] aralığında tam 15.56 birimdir.
     // Cadde Z merkezi: 0.713876
     // Cadde asfalt kotu (Y): -0.490819
-    // Cadde X merkezi: -4.500996, uzunluk: 17.104088 birim
+    // Cadde X asfalt merkezi: -4.180 birim (-11.96 + 3.60) / 2
     //
     // Konvoy için ölçek: s = 8.0
-    // Cadde şerit çizgileri: X = -4.73m ve X = +4.73m (9.46m net asfalt genişliği)
-    // 3 Şeritli konvoy (-2.85m, 0m, +2.85m) caddenin tam ortasına oturur!
-    // Binalar sol tarafta X < -8.7m, sağ tarafta X > +9.7m mesafededir.
+    // Net cadde blok uzunluğu: 15.56 * 8.0 = 124.48m.
+    // 25cm emniyet bindirmesiyle (overlap) tam 124.25m yapılarak bloklar arası sıfır boşluk sağlanır!
     const s = 8.0;
     const zRoadCenter = 0.713876;
     const yRoadSurface = -0.490819;
-    const xRoadCenter = -4.500996;
-    const blockLength = 17.104088 * s; // 136.83m
+    const xRoadCenter = -4.180;
+    const blockLength = 124.25;
 
     this.cityLoopLength = blockLength;
 
-    // 3 Blok arka arkaya dizilerek kesintisiz 410 metrelik sonsuz cadde oluşturulur
+    // 3 Blok arka arkaya dizilerek kesintisiz 372 metrelik sonsuz cadde oluşturulur
     const blockZPositions = [-blockLength, 0, blockLength];
 
     // Eski bloklar varsa temizle
@@ -503,8 +520,8 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 1. 3D Şehir & Cadde Bloklarını Sonsuz Döngüde Akıcı Kaydır (410m kesintisiz)
-    const loopLen = this.cityLoopLength || 136.83;
+    // 1. 3D Şehir & Cadde Bloklarını Sonsuz Döngüde Akıcı Kaydır (Sıfır Boşluk)
+    const loopLen = this.cityLoopLength || 124.25;
     const minZ = -loopLen * 1.5;
     const wrapDistance = loopLen * 3.0;
 
