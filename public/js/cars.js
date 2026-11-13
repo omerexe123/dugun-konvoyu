@@ -187,8 +187,10 @@ const CarFactory = {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|roda).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|roda|jerez|alloy|dianteir|traseir|pneu).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
     const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy/i;
+    // Bütün arabayı veya birden fazla tekeri içeren üst montaj kök grupları (bunları atla, altındaki 4 teker aksını seç)
+    const rootAssemblyRegex = /^(wheels?(\.\d+)?(_\d+)?|belvedere_18_\d+|jerez_19_\d+|alloy_15_\d+|scene.*)$/i;
 
     const candidates = [];
 
@@ -196,9 +198,7 @@ const CarFactory = {
       if (!ch) return;
       const name = ch.name || '';
       if (blacklistRegex.test(name)) return;
-
-      // Tüm tekerleklerin ana ebeveyn montaj grubu ise atla (bütün arabayı/aksı döndürmemek için)
-      if (/^wheels/i.test(name) || /^belvedere_18_\d+$/i.test(name)) return;
+      if (rootAssemblyRegex.test(name)) return;
 
       // 1. Düğüm adı kuralı
       if (wheelNodeRegex.test(name)) {
@@ -210,26 +210,18 @@ const CarFactory = {
       if (ch.isMesh && ch.material) {
         const mat = ch.material;
         const matName = (Array.isArray(mat) ? mat.map(m => m.name).join(' ') : (mat.name || '')).toLowerCase();
-        if (/front_tire|rear_tire|tire1mtl|felge/i.test(matName)) {
+        if (/front_tire|rear_tire|tire1mtl|felge|a45s_tires|rims\b/i.test(matName)) {
           candidates.push(ch);
         }
       }
     });
 
-    // Filtre: Eğer seçilen bir nesnenin çocuklarında başka adaylar varsa (montaj grubu) atla.
-    // Eğer üst ebeveyni zaten listede varsa çocuğu dahil etme (çift dönüşü engelle)
+    // Filtre: En üst seviyedeki tekil tekerlek aksını (FL, FR, RL, RR) koru!
+    // Eğer bir adayın üst ebeveyni zaten adaylar arasındaysa alt parçayı (jant, vida, kapak) dahil etme
     const filtered = candidates.filter(cand => {
-      let hasChildCandidate = false;
-      cand.traverse(child => {
-        if (child !== cand && candidates.includes(child)) {
-          hasChildCandidate = true;
-        }
-      });
-      if (hasChildCandidate) return false;
-
       let p = cand.parent;
       while (p && p !== container) {
-        if (candidates.includes(p)) return false;
+        if (candidates.includes(p)) return false; // Üst montaj zaten listede, alt parçayı çift döndürme
         p = p.parent;
       }
       return true;
@@ -505,7 +497,8 @@ const CarFactory = {
     });
 
     // Motor Alt Neon Paketi (Hediye ile açılabilir, tek tekere kalkınca şasiyle beraber kalkar)
-    this.attachUnderglow(bikeContainer, { isMotor: true });
+    const motorNeon = this.attachUnderglow(bikeContainer, { isMotor: true });
+    group.userData.neon = motorNeon;
 
     wheeliePivot.add(bikeContainer);
     group.add(wheeliePivot);

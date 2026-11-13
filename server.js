@@ -720,7 +720,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   }
 
   // 6. KURAL: CAKE SLICE (Pasta Dilimi - 1🪙) -> LASTİK YAKMA & BURNOUT
-  if (gName.includes('cake') || gName.includes('pasta') || gName.includes('slice') || gName.includes('fire') || gName.includes('ateş')) {
+  if (gName.includes('cake') || gName.includes('pasta') || gName.includes('slice') || gName.includes('fire') || gName.includes('ateş') || gName.includes('çörek') || gName.includes('corek') || gName.includes('burnout') || gName.includes('lastik')) {
     gameState.stats.totalBurnouts = (gameState.stats.totalBurnouts || 0) + 1;
     addPointsToConvoyUser(user, 25 * repeatCount, 'Pasta Dilimi Burnout');
     broadcast('EVENT_BURNOUT', {
@@ -874,7 +874,7 @@ app.post('/api/simulate', (req, res) => {
       handleGiftEvent(uId, nick, avatar, 'Ice Cream Cone', 1, 1);
       break;
     case 'burnout':
-      handleGiftEvent(uId, nick, avatar, 'Çörek', 30, 1);
+      handleGiftEvent(uId, nick, avatar, 'Cake Slice (Burnout)', 1, 1);
       break;
     case 'overtake':
       handleGiftEvent(uId, nick, avatar, 'Finger Heart', 5, 1);

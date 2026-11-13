@@ -53,12 +53,12 @@ class HighwayEngine {
     this.scene.add(groundMesh);
 
     // 2. Bulvar Altı Kesintisiz Asfalt Şeridi (Blok geçişlerinde 1 milimetre dahi mavi boşluk/delik oluşmasını engeller)
-    const roadRunwayGeo = new THREE.PlaneGeometry(19.0, 1400);
+    const roadRunwayGeo = new THREE.PlaneGeometry(28.0, 1600);
     roadRunwayGeo.rotateX(-Math.PI / 2);
     const roadRunwayMat = new THREE.MeshStandardMaterial({
-      color: 0x242a36,
-      roughness: 0.88,
-      metalness: 0.06
+      color: 0x181e28, // Asfalt ile birebir aynı koyu renk (asla mavi zemin görünmez)
+      roughness: 0.92,
+      metalness: 0.05
     });
     const roadRunway = new THREE.Mesh(roadRunwayGeo, roadRunwayMat);
     roadRunway.position.set(0, -0.015, -180);
@@ -90,8 +90,8 @@ class HighwayEngine {
         if (!ch) return;
         const name = (ch.name || '').toLowerCase();
 
-        // 1. Arabalara ve kameraya çarpan alçak trafik ışığı kollarını ve yatay direkleri gizle:
-        if (/circle\.00[1-9]|trafic|signal/i.test(name)) {
+        // 1. Arabalara ve kameraya çarpan alçak trafik ışıklarını, otobüs duraklarını ve tabela engellerini gizle:
+        if (/circle\.00[1-9]|trafic|signal|cube\.00[1-9]|cube_14|smallassetatlas|gltf_scenerootnode\.00[2-4]/i.test(name)) {
           ch.visible = false;
           return;
         }
@@ -99,9 +99,8 @@ class HighwayEngine {
         if (ch.isMesh) {
           ch.castShadow = false;
           ch.receiveShadow = true;
-          ch.frustumCulled = true;
-          ch.matrixAutoUpdate = false;
-          ch.updateMatrix();
+          // Yol ve binaların kamera açısında aniden kaybolmasını engelle:
+          ch.frustumCulled = false;
 
           // PBR Doku ve Malzeme Kalitesini Koru & Şeffaf Delikleri Engelle
           if (ch.material) {
@@ -298,7 +297,8 @@ class HighwayEngine {
     }
   }
 
-  emitDriftSmoke(worldPos, count = 3) {
+  emitDriftSmoke(worldPos, count = 3, isMotor = false) {
+    const rearZOffset = isMotor ? -0.85 : -1.60;
     for (let i = 0; i < count; i++) {
       const p = this.smokePool.find(item => !item.visible);
       if (!p) break;
@@ -307,9 +307,9 @@ class HighwayEngine {
       p.material = this.smokeMat;
       p.material.opacity = 0.70;
       p.position.set(
-        worldPos.x + (Math.random() - 0.5) * 0.9,
-        0.25 + Math.random() * 0.15,
-        worldPos.z - 1.8 - Math.random() * 0.4
+        worldPos.x + (Math.random() - 0.5) * (isMotor ? 0.5 : 0.9),
+        0.20 + Math.random() * 0.15,
+        worldPos.z + rearZOffset - Math.random() * 0.3
       );
       const initScale = 0.8 + Math.random() * 0.4;
       p.scale.set(initScale, initScale, initScale);
@@ -329,7 +329,8 @@ class HighwayEngine {
     }
   }
 
-  emitBurnoutSmoke(worldPos, count = 8) {
+  emitBurnoutSmoke(worldPos, count = 8, isMotor = false) {
+    const rearZOffset = isMotor ? -0.85 : -1.65;
     for (let i = 0; i < count; i++) {
       const p = this.smokePool.find(item => !item.visible);
       if (!p) break;
@@ -338,9 +339,9 @@ class HighwayEngine {
       p.material = this.smokeMat;
       p.material.opacity = 0.92;
       p.position.set(
-        worldPos.x + (Math.random() - 0.5) * 1.4,
-        0.30 + Math.random() * 0.25,
-        worldPos.z - 1.9 - Math.random() * 0.5
+        worldPos.x + (Math.random() - 0.5) * (isMotor ? 0.6 : 1.4),
+        0.25 + Math.random() * 0.20,
+        worldPos.z + rearZOffset - Math.random() * 0.4
       );
       const initScale = 1.3 + Math.random() * 0.6;
       p.scale.set(initScale, initScale, initScale);
