@@ -218,20 +218,20 @@ body {
 .hud-gift-panel {
   position: fixed;
   top: 16px;
-  right: 16px;
+  right: 14px;
   z-index: 32;
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   max-height: calc(100vh - 32px);
 }
 
 .hud-gift-legend {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 100%;
@@ -244,25 +244,29 @@ body {
 }
 
 .gift-badge-item {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  width: 58px;
+  min-height: 52px;
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: none;
   border-radius: 0;
-  padding: 1px 0;
+  padding: 0;
+  margin: 0;
   box-shadow: none;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
   flex-shrink: 0;
   pointer-events: auto;
   user-select: none;
 }
 
 .gift-badge-item:hover {
-  transform: translateX(-4px);
+  transform: scale(1.08);
 }
 
 .gift-badge-item.badge-like,
@@ -281,28 +285,45 @@ body {
 }
 
 .gift-badge-icon {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: flex;
   align-items: center;
   justify-content: center;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+  z-index: 1;
 }
 
 .gift-badge-icon.gift-badge-heart {
-  font-size: 22px;
-  line-height: 32px;
+  font-size: 34px;
+  line-height: 44px;
 }
 
 .gift-badge-title {
-  font-size: 13.5px;
+  position: relative;
+  z-index: 2;
+  margin-top: -13px; /* İkonun alt kısmını kapatacak şekilde tam üstüne biner */
+  font-size: 11px;
   font-weight: 900;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Arial Black", "Impact", sans-serif;
   color: #ffffff;
-  letter-spacing: 0.4px;
-  text-shadow: 0 1px 3px #000, 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
+  text-align: center;
+  line-height: 1.05;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  white-space: normal;
+  width: 100%;
+  -webkit-text-stroke: 1.2px #000000;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0px  2px 4px rgba(0, 0, 0, 1),
+     0px  0px 6px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
 }
 
 .gift-badge-cost {
@@ -1109,34 +1130,26 @@ body.obs-mode #canvas-container {
   }
 
   .gift-badge-item {
-    padding: 1px 0;
-    gap: 3px;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
-    max-width: calc(100vw - 28px);
+    width: 50px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
   }
 
   .gift-badge-icon {
-    min-width: 26px !important;
-    width: 26px !important;
-    height: 26px !important;
-    font-size: 18px !important;
-    line-height: 26px !important;
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 26px !important;
+    line-height: 36px !important;
   }
 
   .gift-badge-title {
-    font-size: 12px !important;
+    font-size: 9.5px !important;
     font-weight: 900 !important;
-    letter-spacing: 0.3px;
-    text-shadow: 0 1px 3px #000, 0 0 4px rgba(0, 0, 0, 0.9);
-  }
-
-  .gift-badge-cost {
-    font-size: 10.5px !important;
-    font-weight: 800 !important;
-    text-shadow: 0 1px 3px #000, 0 0 4px rgba(0, 0, 0, 0.9);
+    margin-top: -11px !important;
+    line-height: 1.05 !important;
+    -webkit-text-stroke: 1px #000;
   }
 
   .hud-now-playing {
@@ -1288,21 +1301,21 @@ body.obs-mode #canvas-container {
   }
 
   .gift-badge-item {
-    padding: 1px 0;
-    gap: 3px;
-    border: none;
-    background: transparent;
-    box-shadow: none;
+    width: 54px;
+    min-height: 48px;
+    padding: 0;
+    margin: 0;
   }
 
   .gift-badge-icon {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
   }
 
   .gift-badge-title {
-    font-size: 13px;
+    font-size: 10px;
     font-weight: 900;
+    margin-top: -12px;
   }
 }
