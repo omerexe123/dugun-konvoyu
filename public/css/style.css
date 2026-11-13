@@ -246,15 +246,15 @@ body {
 .gift-badge-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 2px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9999px;
-  padding: 8px 18px 8px 10px;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  gap: 8px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  padding: 2px 4px;
+  box-shadow: none;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   flex-shrink: 0;
   pointer-events: auto;
@@ -262,96 +262,61 @@ body {
 }
 
 .gift-badge-item:hover {
-  transform: translateX(-6px) scale(1.04);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+  transform: translateX(-4px);
 }
 
-.gift-badge-item.badge-like {
-  border-color: rgba(239, 68, 68, 0.9);
-  background: rgba(239, 68, 68, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(239, 68, 68, 0.3);
-}
-
-.gift-badge-item.badge-bride {
-  border-color: rgba(236, 72, 153, 0.9);
-  background: rgba(236, 72, 153, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(236, 72, 153, 0.3);
-}
-
-.gift-badge-item.badge-groom {
-  border-color: rgba(59, 130, 246, 0.9);
-  background: rgba(59, 130, 246, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(59, 130, 246, 0.3);
-}
-
-.gift-badge-item.badge-drift {
-  border-color: rgba(244, 63, 94, 0.9);
-  background: rgba(244, 63, 94, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(244, 63, 94, 0.3);
-}
-
-.gift-badge-item.badge-motor {
-  border-color: rgba(16, 185, 129, 0.9);
-  background: rgba(16, 185, 129, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.3);
-}
-
-.gift-badge-item.badge-neon {
-  border-color: rgba(6, 182, 212, 0.9);
-  background: rgba(6, 182, 212, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(6, 182, 212, 0.3);
-}
-
-.gift-badge-item.badge-burnout {
-  border-color: rgba(249, 115, 22, 0.9);
-  background: rgba(249, 115, 22, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(249, 115, 22, 0.3);
-}
-
-.gift-badge-item.badge-wheelie {
-  border-color: rgba(168, 85, 247, 0.9);
-  background: rgba(168, 85, 247, 0.25);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 12px rgba(168, 85, 247, 0.3);
-}
-
+.gift-badge-item.badge-like,
+.gift-badge-item.badge-bride,
+.gift-badge-item.badge-groom,
+.gift-badge-item.badge-drift,
+.gift-badge-item.badge-upgrade,
+.gift-badge-item.badge-motor,
+.gift-badge-item.badge-neon,
+.gift-badge-item.badge-burnout,
+.gift-badge-item.badge-wheelie,
 .gift-badge-item.badge-galaxy {
-  border-color: rgba(251, 191, 36, 0.95);
-  background: rgba(251, 191, 36, 0.3);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), 0 0 14px rgba(251, 191, 36, 0.35);
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .gift-badge-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   object-fit: contain;
-  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+.gift-badge-icon.gift-badge-heart {
+  font-size: 22px;
+  line-height: 32px;
 }
 
 .gift-badge-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.24;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
 .gift-badge-title {
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 900;
   color: #ffffff;
-  letter-spacing: 0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 1), 0 0 2px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 3px #000, 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
 }
 
 .gift-badge-cost {
-  font-size: 14px;
+  font-size: 11.5px;
   color: #fde047;
   font-weight: 800;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
+  text-shadow: 0 1px 3px #000, 0 2px 5px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.85);
   white-space: nowrap;
 }
 
@@ -1155,34 +1120,34 @@ body.obs-mode #canvas-container {
   }
 
   .gift-badge-item {
-    padding: 6px 14px 6px 8px;
-    gap: 10px;
-    border-radius: 9999px;
-    border-width: 2px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75);
-    background: rgba(15, 23, 42, 0.94);
+    padding: 2px 2px;
+    gap: 6px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
     max-width: calc(100vw - 28px);
   }
 
   .gift-badge-icon {
-    min-width: 38px !important;
-    width: 38px !important;
-    height: 38px !important;
-    font-size: 24px !important;
-    line-height: 38px !important;
+    min-width: 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 18px !important;
+    line-height: 26px !important;
   }
 
   .gift-badge-title {
-    font-size: 14px !important;
+    font-size: 12px !important;
     font-weight: 900 !important;
     letter-spacing: 0.3px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 1px 3px #000, 0 0 4px rgba(0, 0, 0, 0.9);
   }
 
   .gift-badge-cost {
-    font-size: 12.5px !important;
+    font-size: 10.5px !important;
     font-weight: 800 !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 1px 3px #000, 0 0 4px rgba(0, 0, 0, 0.9);
   }
 
   .hud-now-playing {
@@ -1334,24 +1299,26 @@ body.obs-mode #canvas-container {
   }
 
   .gift-badge-item {
-    padding: 7px 16px 7px 10px;
-    gap: 11px;
-    border-width: 2px;
+    padding: 2px 4px;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .gift-badge-icon {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
   }
 
   .gift-badge-title {
-    font-size: 15px;
+    font-size: 13.5px;
     font-weight: 900;
   }
 
   .gift-badge-cost {
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 800;
   }
 }
