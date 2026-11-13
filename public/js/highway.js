@@ -299,8 +299,18 @@ class HighwayEngine {
       depthWrite: false
     });
 
+    const fireworkColors = [0xff0055, 0x00f0ff, 0xffd700, 0x39ff14, 0xff00ff, 0xffffff];
+    this.fireworkMaterials = fireworkColors.map(col => new THREE.MeshBasicMaterial({
+      color: col,
+      transparent: true,
+      opacity: 1.0,
+      depthWrite: false
+    }));
+
     for (let i = 0; i < 80; i++) {
-      const p = new THREE.Mesh(geom, this.smokeMat.clone());
+      const clonedMat = this.smokeMat.clone();
+      const p = new THREE.Mesh(geom, clonedMat);
+      p.userData.origSmokeMat = clonedMat;
       p.visible = false;
       this.scene.add(p);
       this.smokePool.push(p);
@@ -314,7 +324,7 @@ class HighwayEngine {
       if (!p) break;
 
       p.visible = true;
-      p.material = this.smokeMat;
+      p.material = p.userData.origSmokeMat || this.smokeMat;
       p.material.opacity = 0.70;
       p.position.set(
         worldPos.x + (Math.random() - 0.5) * (isMotor ? 0.5 : 0.9),
@@ -346,7 +356,7 @@ class HighwayEngine {
       if (!p) break;
 
       p.visible = true;
-      p.material = this.smokeMat;
+      p.material = p.userData.origSmokeMat || this.smokeMat;
       p.material.opacity = 0.92;
       p.position.set(
         worldPos.x + (Math.random() - 0.5) * (isMotor ? 0.6 : 1.4),
@@ -412,8 +422,7 @@ class HighwayEngine {
 
       p.visible = true;
       p.position.copy(origin);
-      const chosenColor = colors[Math.floor(Math.random() * colors.length)];
-      p.material = new THREE.MeshBasicMaterial({ color: chosenColor, transparent: true, opacity: 1.0 });
+      p.material = this.fireworkMaterials[Math.floor(Math.random() * this.fireworkMaterials.length)];
 
       const angle = Math.random() * Math.PI * 2;
       const speed = 5.0 + Math.random() * 10.0;
@@ -583,7 +592,7 @@ class HighwayEngine {
 
       if (p.userData.life <= 0) {
         p.visible = false;
-        if (p.userData.isSpark || p.userData.isFirework) p.material = this.smokeMat;
+        if (p.userData.isSpark || p.userData.isFirework) p.material = p.userData.origSmokeMat || this.smokeMat;
         this.activeParticles.splice(i, 1);
         continue;
       }

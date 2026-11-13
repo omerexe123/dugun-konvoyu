@@ -267,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mode: 'day', // Sabit gündüz
     time: 12.0,  // Tam öğle vakti (Güneşli, net)
     speed: 0.0,  // Döngü yok, sabit gündüz
+    isDirty: true, // Gereksiz CPU/GPU döngüsünü sıfırla
 
     states: {
       day: {
@@ -321,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (newMode === 'day') this.time = 12.0;
       else if (newMode === 'sunset') this.time = 19.5;
       else if (newMode === 'night') this.time = 0.5;
+      this.isDirty = true;
       this.updateUI();
     },
 
@@ -342,9 +344,11 @@ document.addEventListener('DOMContentLoaded', () => {
     update(dt) {
       if (this.mode === 'auto') {
         this.time = (this.time + dt * this.speed) % 24.0;
-      } else if (this.mode === 'day') {
-        this.time = 12.0;
+        this.isDirty = true;
+      } else if (!this.isDirty) {
+        return;
       }
+      this.isDirty = false;
 
       const h = this.time;
       let sA, sB, f = 0;

@@ -86,16 +86,10 @@ const CarFactory = {
         f,
         gltf => {
           this.gltfCache[f] = gltf.scene;
-          this.queueTexturesForUpload(gltf.scene);
+          delete this._loadingFiles[f];
           finish();
-          clearTimeout(this._reloadTimer);
-          const doReload = () => {
-            if (this._texPumping) { this._reloadTimer = setTimeout(doReload, 200); return; }
-            if (window.convoy && typeof window.convoy.reloadAllCars === 'function') {
-              window.convoy.reloadAllCars();
-            }
-          };
-          this._reloadTimer = setTimeout(doReload, 400);
+          // Tüm konvoyu yıkmak yerine sadece bu modeli bekleyen aracı tek karede pürüzsüzce güncelle
+          this.onSingleModelLoaded(f);
         },
         undefined,
         err => {
@@ -106,31 +100,23 @@ const CarFactory = {
       );
     }
   },
-  // Büyük GLB dokularını GPU'ya kare başına 1 adet yükle (araç ilk göründüğünde oluşan donmayı engeller, kalite aynı)
-  _texQueue: [],
-  _texPumping: false,
-  queueTexturesForUpload(scene) {
-    const seen = new Set();
-    scene.traverse(ch => {
-      if (!ch.isMesh || !ch.material) return;
-      (Array.isArray(ch.material) ? ch.material : [ch.material]).forEach(m => {
-        ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'alphaMap'].forEach(k => {
-          const t = m[k];
-          if (t && !seen.has(t)) { seen.add(t); this._texQueue.push(t); }
-        });
-      });
-    });
-    if (this._texPumping) return;
-    this._texPumping = true;
-    const step = () => {
-      const t = this._texQueue.shift();
-      if (t && window.renderer && typeof window.renderer.initTexture === 'function') {
-        try { window.renderer.initTexture(t); } catch (e) { /* yoksay */ }
+
+  onSingleModelLoaded(file) {
+    if (!window.convoy) return;
+    if (file === this.GELIN_MODEL && window.convoy.leadCar) {
+      window.convoy.refreshLeadCar();
+      return;
+    }
+    const cars = window.convoy.activeCarsList || Object.values(window.convoy.convoyCars || {});
+    cars.forEach(cObj => {
+      const isMotor = cObj.isMotor;
+      const targetTier = isMotor ? (cObj.user.motorTier || 1) : (cObj.user.tier || 1);
+      const map = isMotor ? this.MOTOR_MAP : this.TIER_MAP;
+      const config = map[targetTier];
+      if (config && config.file === file) {
+        window.convoy.refreshCarMesh(cObj);
       }
-      if (this._texQueue.length > 0) requestAnimationFrame(step);
-      else this._texPumping = false;
-    };
-    requestAnimationFrame(step);
+    });
   },
   // Kernel seviyesinde evrensel GLB Bounding Box ve Yön Düzelticisi
   normalizeModel(rawScene, targetL, isMotor = false, explicitRotY = Math.PI) {

@@ -96,6 +96,35 @@ class ConvoyManager {
     }
   }
 
+  // Tek bir GLB modeli indiğinde sadece o modeli kullanan aracı yenile (Donmayı sıfırlayan cerrahi güncelleme)
+  refreshCarMesh(cObj) {
+    if (!cObj || !cObj.group) return;
+    const isMotorcycle = cObj.isMotor;
+    const targetTier = isMotorcycle ? (cObj.user.motorTier || 1) : (cObj.user.tier || 1);
+    while (cObj.group.children.length > 0) {
+      cObj.group.remove(cObj.group.children[0]);
+    }
+    cObj.group.userData.neon = null;
+    cObj.carMesh = null;
+    let newVehicle = isMotorcycle ? CarFactory.createMotorcycle(targetTier) : CarFactory.createCarByTier(targetTier);
+    cObj.group.add(newVehicle);
+    cObj.carMesh = newVehicle;
+    cObj.tier = targetTier;
+    cObj.group.userData.wheels = newVehicle.userData.wheels || [];
+    if (newVehicle.userData.neon) cObj.group.userData.neon = newVehicle.userData.neon;
+    if (cObj.user.neonColor) this.setCarNeon(cObj.user.uniqueId, cObj.user.neonColor);
+    this.updateCarLabel(cObj.user, cObj, cObj.rankIdx);
+  }
+
+  refreshLeadCar() {
+    if (!this.leadCar) return;
+    const oldPos = this.leadCar.position.clone();
+    this.scene.remove(this.leadCar);
+    this.leadCar = CarFactory.createGelinArabasi('Gelin', 'Damat');
+    this.leadCar.position.copy(oldPos);
+    this.scene.add(this.leadCar);
+  }
+
   reloadAllCars() {
     if (this.leadCar) {
       this.scene.remove(this.leadCar);
@@ -834,8 +863,6 @@ class ConvoyManager {
       } else {
         cObj.group.position.x = THREE.MathUtils.lerp(currentX, effectiveTargetX, 0.08);
       }
-
-      cObj.group.position.z = THREE.MathUtils.lerp(currentZ, effectiveTargetZ, lerpSpeed);
 
       // 60 FPS PÜRÜZSÜZ TEK TEKER (WHEELIE) FİZİĞİ
       if (cObj.isWheelie && cObj.wheelieState) {
