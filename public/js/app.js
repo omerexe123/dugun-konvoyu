@@ -54,6 +54,122 @@ document.addEventListener('DOMContentLoaded', () => {
   window.convoy = convoy; // Kernel referansı: CarFactory modelleri yüklediğinde arabaları anında yeniler
 
   // -------------------------------------------------------------
+  // Gelişmiş Işık, Renk & Gölgelendirme Ayarları (Gerçek Zamanlı Motor)
+  // -------------------------------------------------------------
+  const DEFAULT_GRAPHICS = {
+    sunLight: 1.0,
+    ambientLight: 1.0,
+    shadowOpacity: 65,
+    exposure: 1.35,
+    saturation: 110,
+    contrast: 105,
+    preset: 'natural'
+  };
+
+  const GRAPHICS_PRESETS = {
+    natural: {
+      sunLight: 1.0,
+      ambientLight: 1.0,
+      shadowOpacity: 65,
+      exposure: 1.35,
+      saturation: 100,
+      contrast: 100
+    },
+    vibrant: {
+      sunLight: 1.25,
+      ambientLight: 1.15,
+      shadowOpacity: 75,
+      exposure: 1.45,
+      saturation: 130,
+      contrast: 110
+    },
+    cinematic: {
+      sunLight: 1.1,
+      ambientLight: 0.9,
+      shadowOpacity: 85,
+      exposure: 1.25,
+      saturation: 95,
+      contrast: 120
+    },
+    wedding: {
+      sunLight: 1.3,
+      ambientLight: 1.2,
+      shadowOpacity: 70,
+      exposure: 1.50,
+      saturation: 115,
+      contrast: 105
+    }
+  };
+
+  let graphicsSettings = Object.assign({}, DEFAULT_GRAPHICS);
+
+  try {
+    const savedGraphics = localStorage.getItem('convoy_graphics_settings');
+    if (savedGraphics) {
+      graphicsSettings = Object.assign({}, DEFAULT_GRAPHICS, JSON.parse(savedGraphics));
+    }
+  } catch (e) {
+    console.warn('[Graphics] LocalStorage okunamadı:', e);
+  }
+
+  function applyGraphicsSettings(save = true) {
+    if (renderer) {
+      renderer.toneMappingExposure = graphicsSettings.exposure;
+      if (renderer.domElement) {
+        renderer.domElement.style.filter = `saturate(${graphicsSettings.saturation}%) contrast(${graphicsSettings.contrast}%)`;
+      }
+    }
+
+    if (window.CarFactory && typeof CarFactory.setShadowOpacity === 'function') {
+      CarFactory.setShadowOpacity(graphicsSettings.shadowOpacity / 100);
+    }
+
+    const valSun = document.getElementById('val-sun-light');
+    if (valSun) valSun.textContent = graphicsSettings.sunLight.toFixed(2) + 'x';
+    const sliderSun = document.getElementById('slider-sun-light');
+    if (sliderSun) sliderSun.value = graphicsSettings.sunLight;
+
+    const valAmb = document.getElementById('val-ambient-light');
+    if (valAmb) valAmb.textContent = graphicsSettings.ambientLight.toFixed(2) + 'x';
+    const sliderAmb = document.getElementById('slider-ambient-light');
+    if (sliderAmb) sliderAmb.value = graphicsSettings.ambientLight;
+
+    const valShadow = document.getElementById('val-shadow-opacity');
+    if (valShadow) valShadow.textContent = '%' + Math.round(graphicsSettings.shadowOpacity);
+    const sliderShadow = document.getElementById('slider-shadow-opacity');
+    if (sliderShadow) sliderShadow.value = graphicsSettings.shadowOpacity;
+
+    const valExp = document.getElementById('val-exposure');
+    if (valExp) valExp.textContent = graphicsSettings.exposure.toFixed(2);
+    const sliderExp = document.getElementById('slider-exposure');
+    if (sliderExp) sliderExp.value = graphicsSettings.exposure;
+
+    const valSat = document.getElementById('val-saturation');
+    if (valSat) valSat.textContent = '%' + Math.round(graphicsSettings.saturation);
+    const sliderSat = document.getElementById('slider-saturation');
+    if (sliderSat) sliderSat.value = graphicsSettings.saturation;
+
+    const valCon = document.getElementById('val-contrast');
+    if (valCon) valCon.textContent = '%' + Math.round(graphicsSettings.contrast);
+    const sliderCon = document.getElementById('slider-contrast');
+    if (sliderCon) sliderCon.value = graphicsSettings.contrast;
+
+    document.querySelectorAll('.btn-preset').forEach(btn => {
+      const isMatch = btn.dataset.preset === graphicsSettings.preset;
+      btn.classList.toggle('active-preset', isMatch);
+    });
+
+    if (save) {
+      try {
+        localStorage.setItem('convoy_graphics_settings', JSON.stringify(graphicsSettings));
+      } catch (e) {}
+    }
+  }
+
+  // İlk yüklemede grafikleri hemen uygula
+  applyGraphicsSettings(false);
+
+  // -------------------------------------------------------------
   // Dinamik Gün / Gece Çevre Motoru (Varsayılan: Sabit Parlak Gündüz)
   // -------------------------------------------------------------
   const dayNight = {
@@ -153,10 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
       scene.fog.density = THREE.MathUtils.lerp(sA.fogDensity, sB.fogDensity, f);
 
       ambientLight.color.lerpColors(sA.ambient, sB.ambient, f);
-      ambientLight.intensity = THREE.MathUtils.lerp(sA.ambientInt, sB.ambientInt, f);
+      ambientLight.intensity = THREE.MathUtils.lerp(sA.ambientInt, sB.ambientInt, f) * graphicsSettings.ambientLight;
 
       sunLight.color.lerpColors(sA.sun, sB.sun, f);
-      sunLight.intensity = THREE.MathUtils.lerp(sA.sunInt, sB.sunInt, f);
+      sunLight.intensity = THREE.MathUtils.lerp(sA.sunInt, sB.sunInt, f) * graphicsSettings.sunLight;
       sunLight.position.lerpVectors(sA.sunPos, sB.sunPos, f);
 
       hemiLight.color.lerpColors(sA.hemiSky, sB.hemiSky, f);
@@ -531,6 +647,79 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sfxVolSlider) {
     sfxVolSlider.addEventListener('input', (e) => {
       if (audio) audio.setSfxVolume(parseFloat(e.target.value) / 100);
+    });
+  }
+
+  // Grafik, Renk, Işık & Gölgelendirme Olay Dinleyicileri
+  const sliderSun = document.getElementById('slider-sun-light');
+  if (sliderSun) {
+    sliderSun.addEventListener('input', (e) => {
+      graphicsSettings.sunLight = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  const sliderAmb = document.getElementById('slider-ambient-light');
+  if (sliderAmb) {
+    sliderAmb.addEventListener('input', (e) => {
+      graphicsSettings.ambientLight = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  const sliderShadow = document.getElementById('slider-shadow-opacity');
+  if (sliderShadow) {
+    sliderShadow.addEventListener('input', (e) => {
+      graphicsSettings.shadowOpacity = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  const sliderExp = document.getElementById('slider-exposure');
+  if (sliderExp) {
+    sliderExp.addEventListener('input', (e) => {
+      graphicsSettings.exposure = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  const sliderSat = document.getElementById('slider-saturation');
+  if (sliderSat) {
+    sliderSat.addEventListener('input', (e) => {
+      graphicsSettings.saturation = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  const sliderCon = document.getElementById('slider-contrast');
+  if (sliderCon) {
+    sliderCon.addEventListener('input', (e) => {
+      graphicsSettings.contrast = parseFloat(e.target.value);
+      graphicsSettings.preset = 'custom';
+      applyGraphicsSettings();
+    });
+  }
+
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.preset;
+      if (GRAPHICS_PRESETS[p]) {
+        Object.assign(graphicsSettings, GRAPHICS_PRESETS[p], { preset: p });
+        applyGraphicsSettings();
+      }
+    });
+  });
+
+  const btnResetGraphics = document.getElementById('btn-reset-graphics');
+  if (btnResetGraphics) {
+    btnResetGraphics.addEventListener('click', () => {
+      graphicsSettings = Object.assign({}, DEFAULT_GRAPHICS);
+      applyGraphicsSettings();
     });
   }
 

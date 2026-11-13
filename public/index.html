@@ -203,6 +203,73 @@
         </div>
       </section>
 
+      <!-- 4. Gelişmiş Işık, Renk & Gölgelendirme Ayarları -->
+      <section class="panel-section graphics-settings-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="section-label" style="margin-bottom: 0;">🎨 Işık, Renk & Gölgelendirme</span>
+          <button id="btn-reset-graphics" class="btn" style="padding: 2px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">
+            🔄 Sıfırla
+          </button>
+        </div>
+
+        <!-- Hazır Renk & Atmosfer Profilleri -->
+        <div class="graphics-presets-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+          <button class="btn btn-preset active-preset" data-preset="natural" style="font-size: 10px; padding: 5px 2px;">🌿 Doğal</button>
+          <button class="btn btn-preset" data-preset="vibrant" style="font-size: 10px; padding: 5px 2px;">🔥 Canlı</button>
+          <button class="btn btn-preset" data-preset="cinematic" style="font-size: 10px; padding: 5px 2px;">🎬 Filmik</button>
+          <button class="btn btn-preset" data-preset="wedding" style="font-size: 10px; padding: 5px 2px;">👑 Düğün</button>
+        </div>
+
+        <!-- Slayderlar -->
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>☀️ Güneş Işığı</span>
+            <span id="val-sun-light" class="slider-badge">1.0x</span>
+          </div>
+          <input type="range" id="slider-sun-light" min="0.4" max="2.2" step="0.05" value="1.0" class="graphic-range">
+        </div>
+
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>💡 Ortam Aydınlığı</span>
+            <span id="val-ambient-light" class="slider-badge">1.0x</span>
+          </div>
+          <input type="range" id="slider-ambient-light" min="0.4" max="2.2" step="0.05" value="1.0" class="graphic-range">
+        </div>
+
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>🚗 Asfalt Temas Gölgesi</span>
+            <span id="val-shadow-opacity" class="slider-badge">%65</span>
+          </div>
+          <input type="range" id="slider-shadow-opacity" min="0" max="100" step="5" value="65" class="graphic-range">
+        </div>
+
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>📸 Pozlama (Exposure)</span>
+            <span id="val-exposure" class="slider-badge">1.35</span>
+          </div>
+          <input type="range" id="slider-exposure" min="0.70" max="2.20" step="0.05" value="1.35" class="graphic-range">
+        </div>
+
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>🌈 Renk Doygunluğu (Sat)</span>
+            <span id="val-saturation" class="slider-badge">%110</span>
+          </div>
+          <input type="range" id="slider-saturation" min="60" max="200" step="5" value="110" class="graphic-range">
+        </div>
+
+        <div class="graphic-slider-row">
+          <div class="slider-header">
+            <span>⚡ Kontrast</span>
+            <span id="val-contrast" class="slider-badge">%105</span>
+          </div>
+          <input type="range" id="slider-contrast" min="80" max="160" step="5" value="105" class="graphic-range">
+        </div>
+      </section>
+
       <!-- 4. Konvoy Radyosu (Düğün, Pop & Piyasa Müzikleri) -->
       <section class="panel-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">

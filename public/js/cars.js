@@ -135,7 +135,20 @@ const CarFactory = {
   },
 
   // Asfalta Çakılı Gerçekçi Zemin Gölgesi (Contact Shadow Blob)
-  createContactShadow(width = 2.1, length = 4.6, opacity = 0.65) {
+  shadowMaterials: [],
+  currentShadowOpacity: 0.65,
+
+  setShadowOpacity(val) {
+    this.currentShadowOpacity = Math.max(0, Math.min(1.0, val));
+    for (let i = this.shadowMaterials.length - 1; i >= 0; i--) {
+      const mat = this.shadowMaterials[i];
+      if (mat) {
+        mat.opacity = this.currentShadowOpacity;
+      }
+    }
+  },
+
+  createContactShadow(width = 2.1, length = 4.6, opacity = null) {
     if (!this.shadowTexture) {
       const canvas = document.createElement('canvas');
       canvas.width = 128;
@@ -151,13 +164,16 @@ const CarFactory = {
       this.shadowTexture = new THREE.CanvasTexture(canvas);
     }
 
+    const shadowOp = (opacity !== null) ? opacity : this.currentShadowOpacity;
     const geo = new THREE.PlaneGeometry(width, length);
     const mat = new THREE.MeshBasicMaterial({
       map: this.shadowTexture,
       transparent: true,
-      opacity: opacity,
+      opacity: shadowOp,
       depthWrite: false
     });
+    this.shadowMaterials.push(mat);
+
     const shadowMesh = new THREE.Mesh(geo, mat);
     shadowMesh.rotation.x = -Math.PI / 2;
     shadowMesh.position.y = 0.02; // Asfaltın 2cm üstünde, z-fighting yok
