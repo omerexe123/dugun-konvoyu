@@ -641,6 +641,7 @@ class ConvoyManager {
     }
 
     this.applyCameraShake(dt);
+    this.camera.updateMatrixWorld(true);
   }
 
   applyCameraShake(dt) {
@@ -957,23 +958,25 @@ class ConvoyManager {
   // 3D Etiketleri ve Araç LOD / Mesafe Kırpması
   updateLabels() {
     const camera = this.camera;
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    camera.updateMatrixWorld(true);
+    const container = this.labelsContainer || document.body;
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
     const tempV = new THREE.Vector3();
 
     // Gelin Arabası Bordo Plakası (Tavanın ve sunroof'un üstünde)
     if (this.leadCar && this.leadLabelEl) {
-      tempV.set(this.leadCar.position.x, this.leadCar.position.y + 1.45, this.leadCar.position.z - 0.45);
+      tempV.set(this.leadCar.position.x, this.leadCar.position.y + 1.38, this.leadCar.position.z - 0.25);
       tempV.project(camera);
-      if (tempV.z > 1) {
+      if (tempV.z > 1 || tempV.z < -1) {
         this.leadLabelEl.style.display = 'none';
       } else {
         this.leadLabelEl.style.display = 'flex';
         const lx = (tempV.x * 0.5 + 0.5) * w;
         const ly = (-tempV.y * 0.5 + 0.5) * h;
         const lDist = camera.position.distanceTo(this.leadCar.position);
-        const lScale = Math.max(0.60, Math.min(0.95, 36 / lDist));
-        this.leadLabelEl.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0) translate(-50%, -100%) scale(${lScale.toFixed(2)})`;
+        const lScale = Math.max(0.65, Math.min(1.0, 36 / lDist));
+        this.leadLabelEl.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0) scale(${lScale.toFixed(2)}) translate(-50%, -100%)`;
       }
     }
 
@@ -992,23 +995,23 @@ class ConvoyManager {
         return;
       }
 
-      // Aracın tam tavanı üstünde sabit hizalanmış pozisyon (Araba: 1.45m, Motor: 1.70m)
-      const labelHeight = cObj.isMotor ? 1.70 : 1.45;
+      // Aracın tam tavanı üstünde sabit hizalanmış pozisyon (Araba: 1.30m, Motor: 1.48m)
+      const labelHeight = cObj.isMotor ? 1.48 : 1.30;
       tempV.set(carPos.x, carPos.y + labelHeight, carPos.z);
       tempV.project(camera);
 
-      if (tempV.z > 1) {
+      if (tempV.z > 1 || tempV.z < -1) {
         cObj.labelEl.style.display = 'none';
       } else {
         cObj.labelEl.style.display = 'flex';
         const sx = (tempV.x * 0.5 + 0.5) * w;
         const sy = (-tempV.y * 0.5 + 0.5) * h;
         const dist = camera.position.distanceTo(carPos);
-        // Geniş sinematik kameradan kristal netlikte okunan, yarı yarıya büyütülmüş ölçek
+        // Geniş sinematik kameradan kristal netlikte okunan, pin ucu tavana yapışık ölçek
         const scale = Math.max(0.65, Math.min(1.10, 42 / dist));
         const opacity = dist > 140 ? Math.max(0, 1 - (dist - 140) / 50) : 1;
         cObj.labelEl.style.opacity = opacity.toFixed(2);
-        cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(2)})`;
+        cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) scale(${scale.toFixed(2)}) translate(-50%, -100%)`;
       }
     });
   }

@@ -36,21 +36,34 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 1. Sonsuz Şehir Zemin Tabanı (Derin Asfalt Altlığı)
+  // 1. Sonsuz Şehir Zemin Tabanı (Derin Asfalt Altlığı & Kesintisiz Bulvar Runway)
   // -------------------------------------------------------------
   initRoad() {
-    // Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı (ufuk boşluğunu ve delikleri engeller)
+    // 1. Sonsuz Derin Zemin Tabanı (Ufuk boşluklarını engeller)
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2937,
-      roughness: 0.92,
+      color: 0x181e28,
+      roughness: 0.95,
       metalness: 0.05
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.01;
+    groundMesh.position.y = -0.05;
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
+
+    // 2. Bulvar Altı Kesintisiz Asfalt Şeridi (Blok geçişlerinde 1 milimetre dahi mavi boşluk/delik oluşmasını engeller)
+    const roadRunwayGeo = new THREE.PlaneGeometry(19.0, 1400);
+    roadRunwayGeo.rotateX(-Math.PI / 2);
+    const roadRunwayMat = new THREE.MeshStandardMaterial({
+      color: 0x242a36,
+      roughness: 0.88,
+      metalness: 0.06
+    });
+    const roadRunway = new THREE.Mesh(roadRunwayGeo, roadRunwayMat);
+    roadRunway.position.set(0, -0.015, -180);
+    roadRunway.receiveShadow = true;
+    this.scene.add(roadRunway);
   }
 
   // -------------------------------------------------------------
@@ -77,8 +90,8 @@ class HighwayEngine {
         if (!ch) return;
         const name = (ch.name || '').toLowerCase();
 
-        // 1. Arabalara ve kameraya çarpan alçak trafik ışığı kollarını gizle:
-        if (name.includes('circle.006') || name.includes('circle.007')) {
+        // 1. Arabalara ve kameraya çarpan alçak trafik ışığı kollarını ve yatay direkleri gizle:
+        if (/circle\.00[1-9]|trafic|signal/i.test(name)) {
           ch.visible = false;
           return;
         }
@@ -90,10 +103,23 @@ class HighwayEngine {
           ch.matrixAutoUpdate = false;
           ch.updateMatrix();
 
-          // PBR Doku ve Malzeme Kalitesini Koru
+          // PBR Doku ve Malzeme Kalitesini Koru & Şeffaf Delikleri Engelle
           if (ch.material) {
-            ch.material.roughness = THREE.MathUtils.clamp(ch.material.roughness ?? 0.7, 0.45, 0.85);
-            ch.material.metalness = THREE.MathUtils.clamp(ch.material.metalness ?? 0.1, 0.05, 0.35);
+            const matName = (ch.material.name || '').toLowerCase();
+            if (matName.includes('material.009')) {
+              // Yol çizgileri
+              ch.material.transparent = true;
+              ch.material.depthWrite = false;
+              ch.renderOrder = 2;
+            } else if (matName.includes('blass') || name.includes('grate')) {
+              // Menfez ve ızgaralar asfaltın altına delik açmasın
+              ch.material.transparent = false;
+              ch.material.opacity = 1.0;
+              ch.material.depthWrite = true;
+            } else {
+              ch.material.roughness = THREE.MathUtils.clamp(ch.material.roughness ?? 0.7, 0.45, 0.85);
+              ch.material.metalness = THREE.MathUtils.clamp(ch.material.metalness ?? 0.1, 0.05, 0.35);
+            }
           }
         }
       });
@@ -112,12 +138,15 @@ class HighwayEngine {
     const zRoadCenter = 0.713876;
     const yRoadSurface = -0.490819;
     const xRoadCenter = -4.180;
-    const blockLength = 124.25;
+    // Modelin GLTF uzayındaki gerçek cadde uzunluğu: 15.560436 * 8.0 = 124.4835m
+    const blockLength = 124.4835;
 
     this.cityLoopLength = blockLength;
 
-    // 4 Blok: -186.37m, -62.12m, +62.12m, +186.37m (500 metrelik kesintisiz skyline)
+    // 6 Blok ile 750 metrelik kesintisiz dev bulvar (Konvoy hiçbir zaman blok sınırına yaklaşamaz)
     const blockZPositions = [
+      -blockLength * 3.5,
+      -blockLength * 2.5,
       -blockLength * 1.5,
       -blockLength * 0.5,
       blockLength * 0.5,
@@ -508,10 +537,11 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 3D Şehir Bloklarını Akıcı Kaydır (500m devasa sonsuz döngü)
-    const loopLen = this.cityLoopLength || 124.25;
-    const minZ = -loopLen * 2.0;
-    const wrapDistance = loopLen * 4.0;
+    // 3D Şehir Bloklarını Akıcı Kaydır (750m devasa sonsuz döngü)
+    const loopLen = this.cityLoopLength || 124.4835;
+    const numBlocks = this.cityBlocks.length || 6;
+    const wrapDistance = loopLen * numBlocks;
+    const minZ = -loopLen * 4.0;
 
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;

@@ -187,7 +187,7 @@ const CarFactory = {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|w206_wheel.*|inmx7m60i_wheel.*|m_m_tire.*|polo17wheel.*|tire_01a_.*|wheel_lf\.child.*)$/i;
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|roda).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
     const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy/i;
 
     const candidates = [];
@@ -197,8 +197,8 @@ const CarFactory = {
       const name = ch.name || '';
       if (blacklistRegex.test(name)) return;
 
-      // Tüm tekerleklerin ana ebeveyn grubu ise atla (bütün arabayı döndürmemek için)
-      if (/^wheels(\.\d+|_.*)?$/i.test(name)) return;
+      // Tüm tekerleklerin ana ebeveyn montaj grubu ise atla (bütün arabayı/aksı döndürmemek için)
+      if (/^wheels/i.test(name) || /^belvedere_18_\d+$/i.test(name)) return;
 
       // 1. Düğüm adı kuralı
       if (wheelNodeRegex.test(name)) {
@@ -206,7 +206,7 @@ const CarFactory = {
         return;
       }
 
-      // 2. Malzeme bazlı (Yamaha, BMW M5 vb. modeller)
+      // 2. Malzeme bazlı (Yamaha, BMW M5, Mercedes vb. modeller)
       if (ch.isMesh && ch.material) {
         const mat = ch.material;
         const matName = (Array.isArray(mat) ? mat.map(m => m.name).join(' ') : (mat.name || '')).toLowerCase();
@@ -216,8 +216,17 @@ const CarFactory = {
       }
     });
 
-    // Filtre: Eğer seçilen bir nesnenin üst ebeveyni zaten listede varsa çocuğu dahil etme (çift dönüşü engelle)
+    // Filtre: Eğer seçilen bir nesnenin çocuklarında başka adaylar varsa (montaj grubu) atla.
+    // Eğer üst ebeveyni zaten listede varsa çocuğu dahil etme (çift dönüşü engelle)
     const filtered = candidates.filter(cand => {
+      let hasChildCandidate = false;
+      cand.traverse(child => {
+        if (child !== cand && candidates.includes(child)) {
+          hasChildCandidate = true;
+        }
+      });
+      if (hasChildCandidate) return false;
+
       let p = cand.parent;
       while (p && p !== container) {
         if (candidates.includes(p)) return false;
