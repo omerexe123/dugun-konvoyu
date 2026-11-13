@@ -127,19 +127,18 @@ function getOrCreateConvoyUser(uniqueId, nickname = '', avatar = '', vehicleType
   }
 
   if (!gameState.users[uniqueId]) {
-    // Arabalar ve motorlar rastgele çeşitlilikte olsun
-    const assignedCarTier = Math.floor(Math.random() * CAR_TIERS.length) + 1;
-    const assignedMotorTier = Math.floor(Math.random() * MOTOR_TIERS.length) + 1;
+    // Tüm kullanıcılar standart 1. kademe araçla başlar (Beğeni ile araç yükselmez!)
     const newUser = {
       uniqueId,
       nickname,
       avatar,
-      points: 1,
-      tier: assignedCarTier,
+      points: 0,
+      tier: 1,
       vehicleType, // 'car' veya 'motor'
-      motorTier: assignedMotorTier,
-      carName: vehicleType === 'motor' ? MOTOR_TIERS[assignedMotorTier - 1].name : CAR_TIERS[assignedCarTier - 1].name,
+      motorTier: 1,
+      carName: vehicleType === 'motor' ? MOTOR_TIERS[0].name : CAR_TIERS[0].name,
       likesSent: 0,
+      giftsSent: 0,
       lastActive: Date.now()
     };
     gameState.users[uniqueId] = newUser;
@@ -440,7 +439,7 @@ function handleSelektor(uniqueId, nickname) {
   });
 }
 
-// Beğeni Gelince Otomatik Konvoya Katılma & Puan (1 Beğeni = 1 Puan, Konvoyda Öne Geçiş)
+// Beğeni Gelince Konvoya Katılma (Beğeni arabayı YÜKSELTMEZ, sadece konvoya katar!)
 function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
   uniqueId = String(uniqueId || '').trim();
   if (!uniqueId || uniqueId === 'undefined') {
@@ -456,11 +455,8 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
   const prevLikes = user.likesSent || 0;
   user.likesSent = prevLikes + count;
   gameState.stats.totalLikes += count;
-
-  // Beğeni eşiği aşıldıysa araçtan motora terfi (sadece bir kez, eşik geçişinde)
-  const unlockedMotor = user.vehicleType !== 'motor' &&
-    prevLikes < MOTOR_LIKE_THRESHOLD && user.likesSent >= MOTOR_LIKE_THRESHOLD;
-  if (unlockedMotor) switchToMotor(user);
+  user.lastActive = Date.now();
+  saveState();
 
   const sorted = getSortedConvoy();
   const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
@@ -475,18 +471,39 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
       ? `🚗❤️ ${user.nickname} yayını beğenerek konvoya katıldı!`
       : `❤️ ${user.nickname} yayını beğendi (+${count} Beğeni)!`
   });
+}
 
-  // Her beğeni anında puan kazandırır ve konvoyda öne taşır!
-  addPointsToConvoyUser(user, count, `${count} Beğeni`);
+// SADECE HEDİYE İLE ARABA YÜKSELTME FONKSİYONU
+function upgradeUserVehicle(user, giftName = '', diamondCount = 1) {
+  const prevTier = user.vehicleType === 'motor' ? (user.motorTier || 1) : (user.tier || 1);
+  const oldCar = user.carName || (user.vehicleType === 'motor' ? MOTOR_TIERS[0].name : CAR_TIERS[0].name);
 
-  if (unlockedMotor) {
-    const newRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
-    broadcast('EVENT_MOTOR_SPAWN', {
+  if (user.vehicleType === 'motor') {
+    const tierBoost = diamondCount >= 50 ? 2 : 1;
+    user.motorTier = Math.min(MOTOR_TIERS.length, prevTier + tierBoost);
+    user.carName = MOTOR_TIERS[user.motorTier - 1].name;
+  } else {
+    // 1 hediye = en az +1 araba kademesi atlar (büyük hediyeler daha hızlı atlatır)
+    const tierBoost = (diamondCount >= 100) ? 3 : ((diamondCount >= 20) ? 2 : 1);
+    user.tier = Math.min(CAR_TIERS.length, prevTier + tierBoost);
+    user.carName = CAR_TIERS[user.tier - 1].name;
+  }
+
+  const currentTier = user.vehicleType === 'motor' ? user.motorTier : user.tier;
+  const isUpgraded = currentTier > prevTier;
+  user.giftsSent = (user.giftsSent || 0) + 1;
+  saveState();
+
+  if (isUpgraded) {
+    broadcast('EVENT_CAR_UPGRADE', {
       user,
-      rankIdx: Math.max(0, newRank),
-      message: `🏍️❤️ ${user.nickname} ${MOTOR_LIKE_THRESHOLD} BEĞENİYE ULAŞTI, MOTORA TERFİ ETTİ!`
+      oldCar,
+      newCar: user.carName,
+      message: `🏎️💨 ${user.nickname} ${giftName ? giftName.toUpperCase() + ' İLE ' : ''}ARABASINI YÜKSELTTİ! Artık ${user.carName} kullanıyor!`
     });
   }
+
+  return isUpgraded;
 }
 
 function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
@@ -494,6 +511,7 @@ function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar, 'motor');
 
   switchToMotor(user);
+  upgradeUserVehicle(user, 'Özel Motor', 20);
   user.points += 25;
   saveState();
 
@@ -508,25 +526,11 @@ function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
 }
 
 function addPointsToConvoyUser(user, pointsToAdd, reason = '') {
-  const prevTier = user.tier;
   user.points += pointsToAdd;
-
-  if (user.vehicleType === 'motor') {
-    if (user.points >= 2500) user.motorTier = 4;
-    else if (user.points >= 1000) user.motorTier = 3;
-    else if (user.points >= 350) user.motorTier = 2;
-    else user.motorTier = 1;
-    user.carName = MOTOR_TIERS[user.motorTier - 1].name;
-  } else {
-    user.tier = calculateCarTier(user.points);
-    user.carName = CAR_TIERS[user.tier - 1].name;
-  }
-
   saveState();
 
   const sorted = getSortedConvoy();
   const newRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
-  const tierUp = user.vehicleType === 'car' ? (user.tier > prevTier) : false;
 
   broadcast('EVENT_POINTS', {
     uniqueId: user.uniqueId,
@@ -534,19 +538,9 @@ function addPointsToConvoyUser(user, pointsToAdd, reason = '') {
     newTotal: user.points,
     rankIdx: newRank,
     carName: user.carName,
-    tierUp,
     reason,
     sortedConvoy: sorted
   });
-
-  if (tierUp) {
-    broadcast('EVENT_CAR_UPGRADE', {
-      user,
-      oldCar: CAR_TIERS[prevTier - 1].name,
-      newCar: user.carName,
-      message: `🏎️💨 ${user.nickname} ARABASINI YÜKSELTTİ! Artık ${user.carName} kullanıyor!`
-    });
-  }
 }
 
 // -------------------------------------------------------------
@@ -555,6 +549,7 @@ function addPointsToConvoyUser(user, pointsToAdd, reason = '') {
 function handleBecomeBride(uniqueId, nickname, avatar, giftLabel = 'Perfume (20🪙)') {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
+  upgradeUserVehicle(user, giftLabel, 20);
   gameState.brideId = uniqueId;
   gameState.brideName = nickname;
   user.points += 60;
@@ -573,6 +568,7 @@ function handleBecomeBride(uniqueId, nickname, avatar, giftLabel = 'Perfume (20�
 function handleBecomeGroom(uniqueId, nickname, avatar, giftLabel = 'Hat and Mustache (99🪙)') {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
+  upgradeUserVehicle(user, giftLabel, 99);
   gameState.groomId = uniqueId;
   gameState.groomName = nickname;
   user.points += 60;
@@ -591,6 +587,7 @@ function handleBecomeGroom(uniqueId, nickname, avatar, giftLabel = 'Hat and Must
 function handleEquipNeon(uniqueId, nickname, avatar, color = null) {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
+  upgradeUserVehicle(user, 'TikTok Neon', 1);
   const neonPalette = ['#00f0ff', '#ff007f', '#39ff14', '#8b5cf6', '#ffd700'];
   const chosenColor = color || neonPalette[Math.floor(Math.random() * neonPalette.length)];
   user.neonColor = chosenColor;
@@ -613,6 +610,9 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
 
   gameState.stats.totalGifts += repeatCount;
   const gName = (giftName || '').toLowerCase();
+
+  // KULLANICI HEDİYE ATTI: Arabasını hemen hediye ile yükselt!
+  upgradeUserVehicle(user, giftName, diamondCount);
 
   // 1. KURAL: PERFUME (Parfüm) -> GELİN OLMA
   if (gName.includes('perfume') || gName.includes('parfüm') || gName.includes('parfum') || gName.includes('swan') || gName.includes('kuğu')) {

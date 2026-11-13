@@ -54,12 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.convoy = convoy; // Kernel referansı: CarFactory modelleri yüklediğinde arabaları anında yeniler
 
   // -------------------------------------------------------------
-  // Dinamik Gün / Gece (Aydınlık & Karanlık) Çevre Motoru
+  // Dinamik Gün / Gece Çevre Motoru (Varsayılan: Sabit Parlak Gündüz)
   // -------------------------------------------------------------
   const dayNight = {
-    mode: 'auto', // 'auto' | 'day' | 'sunset' | 'night'
-    time: 21.5,   // 0-24 saat
-    speed: 0.25,  // 24 saat döngü akış hızı
+    mode: 'day', // Sabit gündüz
+    time: 12.0,  // Tam öğle vakti (Güneşli, net)
+    speed: 0.0,  // Döngü yok, sabit gündüz
 
     states: {
       day: {
@@ -129,6 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
     update(dt) {
       if (this.mode === 'auto') {
         this.time = (this.time + dt * this.speed) % 24.0;
+      } else if (this.mode === 'day') {
+        this.time = 12.0;
+      }
+        this.time = (this.time + dt * this.speed) % 24.0;
       }
 
       const h = this.time;
@@ -185,6 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  dayNight.setMode('day');
   window.dayNight = dayNight;
 
   // OBS Modu Kontrolü (?obs=1)
@@ -269,28 +274,31 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(payload.message, 'log-join');
         break;
 
-      // 1. Gül -> Drift Aksiyonu
+      // 1. Gül -> Drift Aksiyonu (Hediye Kamera Odağı ve VIP Mesafe)
       case 'EVENT_DRIFT':
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerDrift(payload.user.uniqueId);
         addLog(payload.message, 'log-drift');
         break;
 
       // 2. Lastik Yakma -> Burnout Aksiyonu
       case 'EVENT_BURNOUT':
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerBurnout(payload.user.uniqueId);
         addLog(payload.message, 'log-burnout');
         break;
 
-      // 3. Özel 5 TL Motor Çıkışı
+      // 3. Özel Motor Çıkışı
       case 'EVENT_MOTOR_SPAWN':
         convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
-        convoy.focusCar(payload.user.uniqueId, 4500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-motor', 5000, payload.giftIcon || 'images/gifts/rosa.webp');
         addLog(payload.message, 'log-motor');
         break;
 
       // 4. Motor Ön Kaldırma (Wheelie)
       case 'EVENT_WHEELIE':
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerWheelie(payload.user.uniqueId);
         addLog(payload.message, 'log-wheelie');
         break;
@@ -310,8 +318,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
 
+      // Hediye ile Araba Yükseltme -> Kamerayı Odakla, Mesafeyi Aç!
       case 'EVENT_CAR_UPGRADE':
         convoy.spawnOrUpdateCar(payload.user);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-upgrade', 4500);
         if (audio) audio.playUpgradeFanfare();
         addLog(payload.message, 'log-upgrade');
@@ -340,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_GALAXY_FESTIVAL':
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 7000);
         if (audio) audio.startDavulZurnaTheme(15000);
         convoy.showBanner(payload.message, 'banner-galaxy', 7000, payload.giftIcon || 'images/gifts/galaxy.webp');
         addLog(payload.message, 'log-galaxy');
@@ -347,24 +358,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'EVENT_NEW_BRIDE':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/swan.webp');
-        convoy.focusCar(null, 5000);
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');
         break;
 
       case 'EVENT_NEW_GROOM':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/lion.webp');
-        convoy.focusCar(null, 5000);
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');
         break;
 
       case 'EVENT_NEON_EQUIP':
-        convoy.setCarNeon(payload.uniqueId, payload.neonColor);
+        const targetId = payload.uniqueId || payload.user?.uniqueId;
+        if (targetId) convoy.triggerGiftFocus(targetId, 6500);
+        convoy.setCarNeon(targetId, payload.neonColor);
         convoy.showBanner(payload.message, 'banner-neon', 4500, payload.giftIcon || 'images/gifts/sunglasses.webp');
-        convoy.focusCar(payload.uniqueId, 4000);
         addLog(payload.message, 'log-neon');
         break;
 
