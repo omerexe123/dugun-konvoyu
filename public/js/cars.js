@@ -180,21 +180,75 @@ const CarFactory = {
     return shadowMesh;
   },
 
-  // Kernel Seviyesinde Model Bütünlüğünü Koruyan Tekerlek Kontrolü
-  // Sadece bağımsız dönme aksı tasarlanmış temiz tekerlek düğümlerini seçer.
-  // Rig edilmemiş showroom modellerinde (Jetta, Golf, Mercedes, Ninja vb.) tekerleklerin
-  // tavana fırlamasını veya fren disklerinin havada uçuşmasını kesin olarak engeller.
+  // Kernel Seviyesinde Model Bütünlüğünü Koruyan Evrensel Tekerlek Motoru
+  // Tüm araba ve motosikletlerin (VW, Mercedes, BMW, Ninja, Yamaha, Pulsar vb.)
+  // tekerleklerini kendi aks merkezinde kusursuz döndürür, tavana fırlamayı %100 engeller.
   setupVehicleWheels(container, isMotor = false) {
     const wheels = [];
     if (!container) return wheels;
 
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|inmx7m60i_wheel.*|m_m_tire.*|wheel_rf_dummy.*|Front Wheel.*|Rear Wheel.*|polo17wheel.*|tire_01a_.*|wheel_front$|wheel_rear$)$/i;
+    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl/i;
+
+    const candidates = [];
+
     container.traverse(ch => {
       if (!ch) return;
-      const name = (ch.name || '').toLowerCase();
-      // Yalnızca bağımsız dönebilen standart aks düğümlerini kabul et:
-      if (/^wheel-(front|back|rear)(-(left|right))?$/i.test(name)) {
-        wheels.push(ch);
+      const name = ch.name || '';
+      if (blacklistRegex.test(name)) return;
+
+      // Tüm tekerleklerin ana ebeveyn grubu ise atla (bütün arabayı döndürmemek için)
+      if (/^wheels(\.\d+|_.*)?$/i.test(name)) return;
+
+      // 1. Düğüm adı kuralı
+      if (wheelNodeRegex.test(name)) {
+        candidates.push(ch);
+        return;
       }
+
+      // 2. Malzeme bazlı (Yamaha, BMW M5 vb. OBJ modeller)
+      if (ch.isMesh && ch.material) {
+        const mat = ch.material;
+        const matName = (Array.isArray(mat) ? mat.map(m => m.name).join(' ') : (mat.name || '')).toLowerCase();
+        if (/front_tire|rear_tire|tire1mtl|felge/i.test(matName)) {
+          candidates.push(ch);
+        }
+      }
+    });
+
+    // Filtre: Eğer seçilen bir nesnenin üst ebeveyni zaten listede varsa çocuğu dahil etme (çift dönüşü engelle)
+    const filtered = candidates.filter(cand => {
+      let p = cand.parent;
+      while (p && p !== container) {
+        if (candidates.includes(p)) return false;
+        p = p.parent;
+      }
+      return true;
+    });
+
+    // Geometri merkezleme ve pivot sabitleme
+    filtered.forEach(cand => {
+      if (cand.isMesh && cand.geometry) {
+        try {
+          cand.geometry.computeBoundingBox();
+          const bbox = cand.geometry.boundingBox;
+          if (bbox) {
+            const center = new THREE.Vector3();
+            bbox.getCenter(center);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+
+            // Tek bir tekerlek meşi ise (tüm gövdeyi kapsamıyorsa) ve pivotu kaçıksa merkeze çek:
+            if (maxDim < 1.35 && center.length() > 0.04) {
+              cand.geometry.center();
+              cand.position.add(center);
+            }
+          }
+        } catch (e) {}
+      }
+
+      wheels.push(cand);
     });
 
     return wheels;

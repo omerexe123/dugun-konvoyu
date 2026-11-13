@@ -154,10 +154,7 @@ function saveState(immediate = false) {
 loadState();
 
 // Gelin/Damat koltuğu SADECE hediyeyle alınır (Perfume -> Gelin, Hat & Mustache -> Damat).
-// Puan sıralamasıyla otomatik atama YOK.
-
-// Beğeniyle motora geçiş eşiği (toplam beğeni sayısı)
-const MOTOR_LIKE_THRESHOLD = 100;
+// Motorla çıkış SADECE 1x GG hediyesiyle olur (Beğeni motora geçirmez).
 
 function switchToMotor(user) {
   user.vehicleType = 'motor';
@@ -716,21 +713,26 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 6. KURAL: ICE CREAM CONE (Dondurma - 1🪙) -> MOTOR ÖN KALDIRMA (TEK TEKER / WHEELIE)
+  // 6. KURAL: ICE CREAM CONE (Dondurma - 1🪙) -> MOTORSA TEK TEKER, ARABAYSA DRİFT!
   if (gName.includes('ice cream') || gName.includes('dondurma') || gName.includes('cone') || gName.includes('külah')) {
-    // Kullanıcı henüz motor değilse motora geçir ve tek teker yaptır
-    if (user.vehicleType !== 'motor') {
-      user.vehicleType = 'motor';
-      user.motorTier = 1;
-      user.carName = MOTOR_TIERS[0].name;
+    if (user.vehicleType === 'motor') {
+      gameState.stats.totalWheelies = (gameState.stats.totalWheelies || 0) + 1;
+      addPointsToConvoyUser(user, 25 * repeatCount, 'Dondurma Tek Teker');
+      broadcast('EVENT_WHEELIE', {
+        user,
+        giftIcon: 'images/gifts/ice_cream.webp',
+        message: `🏍️⚡ ${user.nickname} ICE CREAM CONE (1🪙) İLE MOTOSİKLETİNİ TEK TEKERE KALDIRDI!`
+      });
+    } else {
+      // Araç motor değilse araba ile drift atsın:
+      gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
+      addPointsToConvoyUser(user, 25 * repeatCount, 'Dondurma Yanlama Drifti');
+      broadcast('EVENT_DRIFT', {
+        user,
+        giftIcon: 'images/gifts/ice_cream.webp',
+        message: `🌹💨 ${user.nickname} DONDURMA (1🪙) İLE YANLIYOR! EFSANE DRİFT!`
+      });
     }
-    gameState.stats.totalWheelies = (gameState.stats.totalWheelies || 0) + 1;
-    addPointsToConvoyUser(user, 25 * repeatCount, 'Dondurma Tek Teker');
-    broadcast('EVENT_WHEELIE', {
-      user,
-      giftIcon: 'images/gifts/ice_cream.webp',
-      message: `🏍️⚡ ${user.nickname} ICE CREAM CONE (1🪙) İLE MOTOSİKLETİNİ TEK TEKERE KALDIRDI!`
-    });
     return;
   }
 
@@ -848,7 +850,7 @@ app.post('/api/simulate', (req, res) => {
       handleMotorcycleUpgrade(uId, nick, avatar);
       break;
     case 'wheelie':
-      handleGiftEvent(uId, nick, avatar, 'Kalp', 15, 1);
+      handleGiftEvent(uId, nick, avatar, 'Ice Cream Cone', 1, 1);
       break;
     case 'burnout':
       handleGiftEvent(uId, nick, avatar, 'Çörek', 30, 1);

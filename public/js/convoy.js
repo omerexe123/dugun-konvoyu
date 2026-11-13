@@ -201,6 +201,7 @@ class ConvoyManager {
 
       cObj.group.add(newVehicle);
       cObj.carMesh = newVehicle;
+      cObj.group.userData.wheels = newVehicle.userData.wheels || [];
     }
 
     // Hedef Konumu Belirle
@@ -276,7 +277,7 @@ class ConvoyManager {
   }
 
   // -------------------------------------------------------------
-  // 1. GÜL HEDİYESİ -> UZUN VE GERÇEKÇİ DRİFT (LASTİK İZLERİ DAHİL)
+  // 1. GÜL HEDİYESİ -> UZUN VE GERÇEKÇİ 60 FPS DRİFT (LASTİK İZLERİ DAHİL)
   // -------------------------------------------------------------
   triggerDrift(uniqueId) {
     const cObj = this.convoyCars[uniqueId];
@@ -289,53 +290,15 @@ class ConvoyManager {
     this.showBanner(`🌹💨 ${cObj.user.nickname} GÜL HEDİYESİYLE ASFALTI AĞLATIYOR! UZUN DRİFT!`, 'banner-drift', 4500, 'images/gifts/rose.webp');
 
     const startX = cObj.group.position.x;
-    // Sağa veya sola doğru savrulma yönü
-    const driftDir = startX > 0 ? -1 : 1;
-    let t = 0;
-    const totalDurationSec = 3.6;
-    const intervalMs = 30;
-    const step = intervalMs / (totalDurationSec * 1000);
-
-    const driftInterval = setInterval(() => {
-      t += step;
-
-      if (t < 0.20) {
-        // Aşama 1: Agresif direksiyon kırma & şasi yatışı
-        const phase1 = t / 0.20;
-        cObj.group.rotation.y = driftDir * THREE.MathUtils.lerp(0, 0.62, phase1);
-        cObj.group.rotation.z = -driftDir * 0.08 * phase1; // Gövde viraja yatar
-        cObj.group.position.x += driftDir * 0.07;
-      } else if (t < 0.78) {
-        // Aşama 2: Uzun ve derin yanlama (Sustained Power Slide)
-        // Karşı şeride doğru kayış & kontrollü dalgalanma
-        cObj.group.rotation.y = driftDir * (0.58 + Math.sin(t * 12) * 0.07);
-        cObj.group.rotation.z = -driftDir * (0.06 + Math.sin(t * 10) * 0.02);
-        cObj.group.position.x += driftDir * 0.065;
-
-        // Yoğun lastik dumanı fışkırt & asfaltta kesintisiz pürüzsüz lastik izi çiz
-        if (window.highwayEngine) {
-          window.highwayEngine.emitDriftSmoke(cObj.group.position, 4);
-          window.highwayEngine.emitSkidMarks(uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
-        }
-      } else if (t < 1.0) {
-        // Aşama 3: Kontra verme (Counter-Steer) & Şeride toparlama
-        const phase3 = (t - 0.78) / 0.22;
-        cObj.group.rotation.y = -driftDir * 0.26 * (1.0 - phase3);
-        cObj.group.rotation.z = 0;
-        cObj.group.position.lerp(cObj.targetPos, 0.12);
-
-        // Toparlarken hafif duman ve iz
-        if (window.highwayEngine) {
-          window.highwayEngine.emitDriftSmoke(cObj.group.position, 2);
-          window.highwayEngine.emitSkidMarks(uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
-        }
-      } else {
-        clearInterval(driftInterval);
-        cObj.group.rotation.set(0, 0, 0);
-        cObj.isDrifting = false;
-        if (window.highwayEngine) window.highwayEngine.clearSkidTrack(uniqueId);
-      }
-    }, intervalMs);
+    // Hangi tarafta olduğuna göre içe/karşı şeride doğru savrulma yönü
+    const driftDir = startX >= 0 ? -1 : 1;
+    cObj.driftState = {
+      elapsed: 0,
+      duration: 3.8,
+      dir: driftDir,
+      startX: startX,
+      maxLateral: 1.85
+    };
   }
 
   // -------------------------------------------------------------
@@ -377,47 +340,37 @@ class ConvoyManager {
   }
 
   // -------------------------------------------------------------
-  // 3. MOTOR ÖN KALDIRMA (WHEELIE) AKSİYONU (KUSURSUZ ASFALT HİZASI)
+  // 3. MOTOR ÖN KALDIRMA (WHEELIE) AKSİYONU (MOTOR DEĞİLSE DRİFT ATAR)
   // -------------------------------------------------------------
   triggerWheelie(uniqueId) {
     const cObj = this.convoyCars[uniqueId];
-    if (!cObj || cObj.isWheelie) return;
+    if (!cObj) return;
 
-    const pivot = cObj.carMesh?.userData?.wheeliePivot;
-    if (!pivot) return;
+    // Kural: Eğer araç motosiklet değil de araba ise tek teker yerine efsane drift at:
+    if (!cObj.isMotor) {
+      this.triggerDrift(uniqueId);
+      return;
+    }
+
+    if (cObj.isWheelie) return;
+
+    const pivot = cObj.carMesh?.userData?.wheeliePivot || cObj.group?.userData?.wheeliePivot;
+    if (!pivot) {
+      this.triggerDrift(uniqueId);
+      return;
+    }
 
     cObj.isWheelie = true;
     this.focusCar(uniqueId, 4500);
 
     if (this.audio) this.audio.playMotorcycleRev();
-    this.showBanner(`🏍️⚡ ${cObj.user.nickname} TEK TEKER ÖN KALDIRDI!`, 'banner-wheelie', 4500, 'images/gifts/heart.webp');
+    this.showBanner(`🏍️⚡ ${cObj.user.nickname} DONDURMA HEDİYESİYLE TEK TEKER ÖN KALDIRDI!`, 'banner-wheelie', 4500, 'images/gifts/ice_cream.webp');
 
-    let t = 0;
-    const wheelieInterval = setInterval(() => {
-      t += 0.035;
-
-      if (t < 0.22) {
-        // Ön tekerleği YUKARI (-0.68 radyan ~ 39 derece) kaldır!
-        // Araç +Z yönüne baktığı için negatif pitch açısı ön tekerleği havaya diker!
-        pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, -0.68, 0.25);
-      } else if (t < 0.82) {
-        // Tek tekerde denge, gazlama & asfalta değen arka demirden kıvılcımlar
-        pivot.rotation.x = -0.68 + Math.sin(t * 14) * 0.04;
-        if (window.highwayEngine) {
-          window.highwayEngine.emitWheelieSparks(cObj.group.position, 4);
-          window.highwayEngine.emitSkidMarks(uniqueId, cObj.group.position, 0, true);
-        }
-      } else if (t < 1.0) {
-        // Önü yumuşakça asfalta indir
-        pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, 0, 0.22);
-      } else {
-        clearInterval(wheelieInterval);
-        pivot.rotation.x = 0;
-        cObj.isWheelie = false;
-        if (this.audio) this.audio.playWheelieLand();
-        if (window.highwayEngine) window.highwayEngine.clearSkidTrack(uniqueId);
-      }
-    }, 32);
+    cObj.wheelieState = {
+      elapsed: 0,
+      duration: 3.6,
+      pivot
+    };
   }
 
   // -------------------------------------------------------------
@@ -803,8 +756,82 @@ class ConvoyManager {
       const prevX = cObj.group.position.x;
       const prevZ = cObj.group.position.z;
 
-      cObj.group.position.x = THREE.MathUtils.lerp(currentX, effectiveTargetX, 0.08);
+      // 60 FPS PÜRÜZSÜZ DRİFT FİZİĞİ (Tug-of-war ve takılma kesinlikle yok)
+      if (cObj.isDrifting && cObj.driftState) {
+        const ds = cObj.driftState;
+        ds.elapsed += dt;
+        const p = Math.min(1.0, ds.elapsed / ds.duration);
+
+        if (p < 0.20) {
+          // 1. Giriş: Agresif direksiyon açısı & şasi yatışı
+          const f = p / 0.20;
+          const smooth = f * f * (3 - 2 * f);
+          cObj.group.rotation.y = ds.dir * THREE.MathUtils.lerp(0, 0.62, smooth);
+          cObj.group.rotation.z = -ds.dir * 0.08 * smooth;
+          cObj.group.position.x = ds.startX + ds.dir * ds.maxLateral * smooth;
+        } else if (p < 0.76) {
+          // 2. Apex / Sustained Slide: Asfaltı ağlatan derin ve kontrollü drift
+          const slideF = (p - 0.20) / 0.56;
+          const sway = Math.sin(slideF * Math.PI * 4) * 0.05;
+          cObj.group.rotation.y = ds.dir * (0.58 + sway);
+          cObj.group.rotation.z = -ds.dir * 0.07;
+          cObj.group.position.x = ds.startX + ds.dir * (ds.maxLateral + sway * 0.5);
+
+          if (window.highwayEngine) {
+            window.highwayEngine.emitDriftSmoke(cObj.group.position, 4);
+            window.highwayEngine.emitSkidMarks(cObj.user.uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
+          }
+        } else if (p < 1.0) {
+          // 3. Çıkış / Toparlanma: Kontra direksiyon & şeride pürüzsüz oturma
+          const exitF = (p - 0.76) / 0.24;
+          const smoothExit = exitF * exitF * (3 - 2 * exitF);
+          cObj.group.rotation.y = -ds.dir * 0.22 * (1.0 - smoothExit);
+          cObj.group.rotation.z = 0;
+          cObj.group.position.x = THREE.MathUtils.lerp(ds.startX + ds.dir * ds.maxLateral, cObj.targetPos.x, smoothExit);
+
+          if (window.highwayEngine) {
+            window.highwayEngine.emitDriftSmoke(cObj.group.position, 2);
+            window.highwayEngine.emitSkidMarks(cObj.user.uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
+          }
+        } else {
+          cObj.isDrifting = false;
+          cObj.driftState = null;
+          cObj.group.rotation.set(0, 0, 0);
+          if (window.highwayEngine) window.highwayEngine.clearSkidTrack(cObj.user.uniqueId);
+        }
+      } else {
+        cObj.group.position.x = THREE.MathUtils.lerp(currentX, effectiveTargetX, 0.08);
+      }
+
       cObj.group.position.z = THREE.MathUtils.lerp(currentZ, effectiveTargetZ, lerpSpeed);
+
+      // 60 FPS PÜRÜZSÜZ TEK TEKER (WHEELIE) FİZİĞİ
+      if (cObj.isWheelie && cObj.wheelieState) {
+        const ws = cObj.wheelieState;
+        ws.elapsed += dt;
+        const p = Math.min(1.0, ws.elapsed / ws.duration);
+        const pivot = ws.pivot;
+
+        if (p < 0.20) {
+          const f = p / 0.20;
+          pivot.rotation.x = THREE.MathUtils.lerp(0, -0.68, f * f * (3 - 2 * f));
+        } else if (p < 0.82) {
+          pivot.rotation.x = -0.68 + Math.sin(ws.elapsed * 14) * 0.04;
+          if (window.highwayEngine) {
+            window.highwayEngine.emitWheelieSparks(cObj.group.position, 4);
+            window.highwayEngine.emitSkidMarks(cObj.user.uniqueId, cObj.group.position, 0, true);
+          }
+        } else if (p < 1.0) {
+          const f = (p - 0.82) / 0.18;
+          pivot.rotation.x = THREE.MathUtils.lerp(-0.68, 0, f * f * (3 - 2 * f));
+        } else {
+          pivot.rotation.x = 0;
+          cObj.isWheelie = false;
+          cObj.wheelieState = null;
+          if (this.audio) this.audio.playWheelieLand();
+          if (window.highwayEngine) window.highwayEngine.clearSkidTrack(cObj.user.uniqueId);
+        }
+      }
 
       // Gerçekçi Süspansiyon & Gövde Yatıșı (Body Roll, Pitch & Mikro Canlılık)
       if (!cObj.isDrifting && !cObj.isBurnout && !cObj.isWheelie && !cObj.isOvertaking) {
