@@ -261,7 +261,7 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 2. 3D Şehir Modeli (city.glb) - Kusursuz Birebir Entegrasyon & Sıfır Takılma
+  // 2. 3D Şehir Modeli (beautiful_city.glb) - Kusursuz Birebir Entegrasyon & Sıfır Takılma
   // -------------------------------------------------------------
   initCityModel() {
     if (typeof THREE.GLTFLoader === 'undefined') return;
@@ -276,29 +276,35 @@ class HighwayEngine {
     HighwayEngine.isLoadingCity = true;
 
     const loader = new THREE.GLTFLoader();
-    loader.load('models/city.glb', gltf => {
+    loader.load('models/beautiful_city.glb', gltf => {
       HighwayEngine.isLoadingCity = false;
       const baseScene = gltf.scene;
 
-      // 60 FPS KİLİT: Şehir binaları gölge haritasını boğmasın, orijinal dokuları korunsun
+      // 60 FPS KİLİT OPTİMİZASYON:
+      // Statik binaların shadow map'e render edilmesi yasak (kasıntı ve drop yok).
+      // matrixAutoUpdate=false ile CPU'da gereksiz matris hesaplamalarını iptal et.
       baseScene.traverse(ch => {
         if (ch.isMesh) {
           ch.castShadow = false;
           ch.receiveShadow = false;
           ch.frustumCulled = true;
+          ch.matrixAutoUpdate = false;
+          ch.updateMatrix();
+
+          // PBR Doku ve Malzeme Kalitesini Koru
           if (ch.material) {
-            ch.material.roughness = 0.65;
-            ch.material.metalness = 0.15;
+            ch.material.roughness = THREE.MathUtils.clamp(ch.material.roughness ?? 0.7, 0.45, 0.85);
+            ch.material.metalness = THREE.MathUtils.clamp(ch.material.metalness ?? 0.1, 0.05, 0.4);
           }
         }
       });
 
       HighwayEngine.cachedCity = baseScene;
       this.setupCityBlocks(baseScene);
-      console.log('[HighwayEngine] 3D city.glb başarıyla caddeye yerleştirildi!');
+      console.log('[HighwayEngine] 3D beautiful_city.glb başarıyla caddeye yerleştirildi!');
     }, undefined, err => {
       HighwayEngine.isLoadingCity = false;
-      console.warn('[HighwayEngine] city.glb yükleme uyarısı:', err.message);
+      console.warn('[HighwayEngine] beautiful_city.glb yükleme uyarısı:', err.message);
     });
   }
 
@@ -306,18 +312,29 @@ class HighwayEngine {
     const box = new THREE.Box3().setFromObject(baseScene);
     const size = new THREE.Vector3();
     box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
 
-    // Binaları bulvar boyunca kesintisiz diz (cadde kenarı x = ±26m)
-    const targetBlockLength = 70.0;
-    const s = targetBlockLength / (size.z || 1);
+    // Binaları bulvar boyunca gerçekçi ölçekte (~75 metre yükseklik) ve kesintisiz diz
+    const targetHeight = 75.0;
+    const s = targetHeight / (size.y || 1);
+    const blockLength = Math.max(90.0, (size.z || 1) * s);
+    this.cityLoopLength = blockLength;
 
+    // Bulvar kenarından mesafe: Cadde 12m + Kaldırımlar ve yeşil şerit 14m = x=±26m
+    const roadOffset = 26.0 + (size.x * s * 0.35);
+
+    // 6 Blok: 3 Sol, 3 Sağ (Kesintisiz Ufuk Çizgisi)
     const blockConfigs = [
-      // Sol Taraf (x = -26.0)
-      { x: -26.0, z: -35.0, rotY: 0 },
-      { x: -26.0, z: 35.0, rotY: 0 },
-      // Sağ Taraf (x = 26.0)
-      { x: 26.0, z: -35.0, rotY: Math.PI },
-      { x: 26.0, z: 35.0, rotY: Math.PI }
+      // Sol Taraf (Bulvara dönük)
+      { x: -roadOffset, z: -blockLength, rotY: 0 },
+      { x: -roadOffset, z: 0, rotY: 0 },
+      { x: -roadOffset, z: blockLength, rotY: 0 },
+
+      // Sağ Taraf (Yansımalı bulvara dönük)
+      { x: roadOffset, z: -blockLength, rotY: Math.PI },
+      { x: roadOffset, z: 0, rotY: Math.PI },
+      { x: roadOffset, z: blockLength, rotY: Math.PI }
     ];
 
     // Eski bloklar varsa temizle
@@ -325,17 +342,19 @@ class HighwayEngine {
     this.cityBlocks = [];
 
     blockConfigs.forEach(cfg => {
+      const blockGroup = new THREE.Group();
+
       const clone = baseScene.clone(true);
       clone.scale.set(s, s, s);
+      // Modele göre tabanı tam y=0 asfalt seviyesine ve merkeze oturt
+      clone.position.set(-center.x * s, -box.min.y * s, -center.z * s);
 
-      const b = new THREE.Box3().setFromObject(clone);
-      clone.position.x = cfg.x;
-      clone.position.y = -b.min.y;
-      clone.position.z = cfg.z;
-      clone.rotation.y = cfg.rotY;
+      blockGroup.add(clone);
+      blockGroup.position.set(cfg.x, 0, cfg.z);
+      blockGroup.rotation.y = cfg.rotY;
 
-      this.scene.add(clone);
-      this.cityBlocks.push(clone);
+      this.scene.add(blockGroup);
+      this.cityBlocks.push(blockGroup);
     });
   }
 
@@ -703,11 +722,15 @@ class HighwayEngine {
       }
     });
 
-    // 2. 3D Şehir Bloklarını Akıcı Döndür (140m kesintisiz cadde döngüsü)
+    // 2. 3D Şehir Bloklarını Akıcı Döndür (Kesintisiz Ufuk Çizgisi)
+    const loopLen = this.cityLoopLength || 90.0;
+    const minZ = -loopLen * 1.5;
+    const wrapDistance = loopLen * 3.0;
+
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;
-      if (block.position.z < -70.0) {
-        block.position.z += 140.0;
+      if (block.position.z < minZ) {
+        block.position.z += wrapDistance;
       }
     });
 
