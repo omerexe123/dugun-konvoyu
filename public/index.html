@@ -22,9 +22,45 @@
   <!-- 3D Araç Etiketleri Katmanı -->
   <div id="labels-container"></div>
 
-  <!-- Üst Orta: Konvoy Lideri Rozeti -->
-  <div id="hud-leader-box" class="hud-leader-badge">
-    <span>👑</span> Gelin arabasının arkasında: <b id="hud-leader-name">Konvoy Lideri</b>
+  <!-- Üst Orta: Konvoy Lideri & Canlı Savaş / Hedef HUD -->
+  <div class="hud-top-center-container">
+    <div id="hud-leader-box" class="hud-leader-badge">
+      <span>👑</span> Gelin arabasının arkasında: <b id="hud-leader-name">Konvoy Lideri</b>
+    </div>
+
+    <!-- Gelin vs Damat Canlı Savaş Çubuğu (Tug-of-War) -->
+    <div id="hud-battle-container" class="hud-battle-container">
+      <div class="hud-battle-team team-bride">
+        <span class="battle-team-avatar">👰</span>
+        <div class="battle-team-info">
+          <span class="battle-team-label">GELİN TARAFI</span>
+          <b id="battle-bride-score" class="battle-team-score">50%</b>
+        </div>
+      </div>
+      <div class="hud-battle-track">
+        <div id="hud-battle-fill-bride" class="battle-fill-bride" style="width: 50%;"></div>
+        <div class="battle-divider">⚡</div>
+        <div id="hud-battle-fill-groom" class="battle-fill-groom" style="width: 50%;"></div>
+      </div>
+      <div class="hud-battle-team team-groom">
+        <div class="battle-team-info right">
+          <span class="battle-team-label">DAMAT TARAFI</span>
+          <b id="battle-groom-score" class="battle-team-score">50%</b>
+        </div>
+        <span class="battle-team-avatar">🤵</span>
+      </div>
+    </div>
+
+    <!-- Toplu Düğün Hedefi (Milestone Progress Bar) -->
+    <div id="hud-milestone-box" class="hud-milestone-box">
+      <div class="milestone-header">
+        <span class="milestone-title">🎯 DÜĞÜN HEDEFİ: 100 HEDİYE</span>
+        <span id="milestone-counter" class="milestone-counter">0 / 100</span>
+      </div>
+      <div class="milestone-progress-track">
+        <div id="milestone-progress-fill" class="milestone-progress-fill" style="width: 0%;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Sağ Taraf: Canlı Hediye Rozetleri (Mobil & Dikey Yayın Uyumlu) -->

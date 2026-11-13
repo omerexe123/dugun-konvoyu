@@ -515,6 +515,39 @@ class HighwayEngine {
     }
   }
 
+  // Gökyüzü Havai Fişek Patlaması (Düğün Hedefi & Büyük Hediyeler İçin)
+  emitFireworks(worldPos = null, count = 35) {
+    const origin = worldPos ? worldPos.clone() : new THREE.Vector3((Math.random() - 0.5) * 22, 13 + Math.random() * 8, -15 - Math.random() * 35);
+    origin.y = Math.max(10, origin.y);
+    const colors = [0xff0055, 0x00f0ff, 0xffd700, 0x39ff14, 0xff00ff, 0xffffff];
+
+    for (let i = 0; i < count; i++) {
+      const p = this.smokePool.find(item => !item.visible);
+      if (!p) break;
+
+      p.visible = true;
+      p.position.copy(origin);
+      const chosenColor = colors[Math.floor(Math.random() * colors.length)];
+      p.material = new THREE.MeshBasicMaterial({ color: chosenColor, transparent: true, opacity: 1.0 });
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 5.0 + Math.random() * 10.0;
+      const upSpeed = (Math.random() - 0.2) * 8.0;
+
+      p.scale.set(0.35, 0.35, 0.35);
+      p.userData = {
+        vx: Math.cos(angle) * speed,
+        vy: upSpeed,
+        vz: Math.sin(angle) * speed,
+        grow: -0.12,
+        life: 1.2 + Math.random() * 0.5,
+        isSpark: false,
+        isFirework: true
+      };
+      this.activeParticles.push(p);
+    }
+  }
+
   // -------------------------------------------------------------
   // 5. Asfaltta Kalan Lastik İzi (Skid Marks) Sistemi (Kesintisiz Şeritler)
   // -------------------------------------------------------------
@@ -655,16 +688,20 @@ class HighwayEngine {
       this.confettiParticles.geometry.attributes.position.needsUpdate = true;
     }
 
-    // 4. Duman & Kıvılcım Parçacıklarını Güncelle
+    // 4. Duman, Kıvılcım & Havai Fişek Parçacıklarını Güncelle
     for (let i = this.activeParticles.length - 1; i >= 0; i--) {
       const p = this.activeParticles[i];
       p.userData.life -= dt;
 
       if (p.userData.life <= 0) {
         p.visible = false;
-        if (p.userData.isSpark) p.material = this.materials.smokeWhite;
+        if (p.userData.isSpark || p.userData.isFirework) p.material = this.materials.smokeWhite;
         this.activeParticles.splice(i, 1);
         continue;
+      }
+
+      if (p.userData.isFirework) {
+        p.userData.vy -= 9.8 * dt * 0.45; // Havai fişek yerçekimi
       }
 
       p.position.x += p.userData.vx * dt;
@@ -672,9 +709,9 @@ class HighwayEngine {
       p.position.z += (p.userData.vz + this.scrollSpeed * 0.35) * dt;
 
       const scaleInc = p.userData.grow * dt;
-      p.scale.x += scaleInc;
-      p.scale.y += scaleInc;
-      p.scale.z += scaleInc;
+      p.scale.x = Math.max(0.05, p.scale.x + scaleInc);
+      p.scale.y = Math.max(0.05, p.scale.y + scaleInc);
+      p.scale.z = Math.max(0.05, p.scale.z + scaleInc);
 
       if (!p.userData.isSpark) {
         p.material.opacity = Math.max(0, p.userData.life);

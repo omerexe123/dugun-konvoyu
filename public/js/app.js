@@ -254,6 +254,18 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'INIT_CONVOY_STATE':
         convoy.syncInitialState(payload);
         updateTiktokStatus(payload.liveStatus);
+        if (payload.gameState?.battle) updateBattleHUD(payload.gameState.battle);
+        if (payload.gameState?.milestone) updateMilestoneHUD(payload.gameState.milestone);
+        break;
+
+      case 'EVENT_BATTLE_UPDATE':
+        updateBattleHUD(payload);
+        updateMilestoneHUD(payload);
+        break;
+
+      case 'EVENT_MILESTONE_COMPLETED':
+        convoy.triggerMilestoneCelebration();
+        addLog(payload.message, 'log-galaxy');
         break;
 
       case 'TIKTOK_STATUS':
@@ -383,6 +395,37 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('🗑️ Konvoy sıfırlandı. Sadece Gelin & Damat arabası kaldı.', 'log-sys');
         break;
     }
+  }
+
+  function updateBattleHUD(data) {
+    const brideFill = document.getElementById('hud-battle-fill-bride');
+    const groomFill = document.getElementById('hud-battle-fill-groom');
+    const brideScore = document.getElementById('battle-bride-score');
+    const groomScore = document.getElementById('battle-groom-score');
+
+    let bridePct = data.bridePct;
+    if (bridePct === undefined) {
+      const bPts = data.bridePoints || 50;
+      const gPts = data.groomPoints || 50;
+      bridePct = Math.round((bPts / Math.max(1, bPts + gPts)) * 100);
+    }
+    const groomPct = 100 - bridePct;
+
+    if (brideFill) brideFill.style.width = `${bridePct}%`;
+    if (groomFill) groomFill.style.width = `${groomPct}%`;
+    if (brideScore) brideScore.textContent = `${bridePct}%`;
+    if (groomScore) groomScore.textContent = `${groomPct}%`;
+  }
+
+  function updateMilestoneHUD(data) {
+    const cur = data.milestoneCurrent !== undefined ? data.milestoneCurrent : (data.current || 0);
+    const target = data.milestoneTarget !== undefined ? data.milestoneTarget : (data.target || 100);
+    const fill = document.getElementById('milestone-progress-fill');
+    const counter = document.getElementById('milestone-counter');
+
+    const pct = Math.min(100, Math.round((cur / Math.max(1, target)) * 100));
+    if (fill) fill.style.width = `${pct}%`;
+    if (counter) counter.textContent = `${cur} / ${target}`;
   }
 
   function updateTiktokStatus(status) {

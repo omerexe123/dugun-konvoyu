@@ -52,6 +52,14 @@ const DEFAULT_STATE = {
   groomName: 'Damat Bey 🤵',
   brideId: null,
   groomId: null,
+  battle: {
+    bridePoints: 50,
+    groomPoints: 50
+  },
+  milestone: {
+    current: 0,
+    target: 100
+  },
   users: {},
   stats: {
     totalGifts: 0,
@@ -71,6 +79,8 @@ function loadState() {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
       gameState = JSON.parse(raw);
+      if (!gameState.battle) gameState.battle = { bridePoints: 50, groomPoints: 50 };
+      if (!gameState.milestone) gameState.milestone = { current: 0, target: 100 };
       console.log(`[DB] Düğün konvoyu yüklendi: ${Object.keys(gameState.users || {}).length} araç konvoyda.`);
     } else {
       saveState(true);
@@ -80,6 +90,47 @@ function loadState() {
     gameState = { ...DEFAULT_STATE };
     saveState(true);
   }
+}
+
+function updateBattleAndMilestone(team = 'bride', points = 1, giftCount = 0) {
+  if (!gameState.battle) gameState.battle = { bridePoints: 50, groomPoints: 50 };
+  if (!gameState.milestone) gameState.milestone = { current: 0, target: 100 };
+
+  if (team === 'bride') {
+    gameState.battle.bridePoints += points;
+  } else {
+    gameState.battle.groomPoints += points;
+  }
+
+  let milestoneCompleted = false;
+  if (giftCount > 0) {
+    gameState.milestone.current += giftCount;
+    if (gameState.milestone.current >= gameState.milestone.target) {
+      milestoneCompleted = true;
+      gameState.milestone.current = 0;
+      broadcast('EVENT_MILESTONE_COMPLETED', {
+        message: '🎆👑 DÜĞÜN HEDEFİ TAMAMLANDI! OTOYOL HAVAİ FİŞEK VE HALAY ŞOVU!'
+      });
+    }
+  }
+
+  saveState();
+
+  const total = Math.max(1, gameState.battle.bridePoints + gameState.battle.groomPoints);
+  const bridePct = Math.round((gameState.battle.bridePoints / total) * 100);
+  const groomPct = 100 - bridePct;
+
+  broadcast('EVENT_BATTLE_UPDATE', {
+    bridePoints: gameState.battle.bridePoints,
+    groomPoints: gameState.battle.groomPoints,
+    bridePct,
+    groomPct,
+    milestoneCurrent: gameState.milestone.current,
+    milestoneTarget: gameState.milestone.target,
+    milestoneCompleted
+  });
+
+  return { bridePct, groomPct, milestoneCompleted };
 }
 
 let saveTimeout = null;
@@ -471,6 +522,9 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
       ? `🚗❤️ ${user.nickname} yayını beğenerek konvoya katıldı!`
       : `❤️ ${user.nickname} yayını beğendi (+${count} Beğeni)!`
   });
+
+  // Beğeni Gelin vs Damat çekişmesini hareketlendirir
+  updateBattleAndMilestone(Math.random() < 0.5 ? 'bride' : 'groom', count, 0);
 }
 
 // SADECE HEDİYE İLE ARABA YÜKSELTME FONKSİYONU
@@ -613,6 +667,10 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
 
   // KULLANICI HEDİYE ATTI: Arabasını hemen hediye ile yükselt!
   upgradeUserVehicle(user, giftName, diamondCount);
+
+  // Gelin vs Damat Savaş Puanı & Toplu Düğün Hedefi
+  const isBrideSide = gName.includes('perfume') || gName.includes('parfüm') || gName.includes('swan') || gName.includes('kuğu') || gName.includes('rose') || gName.includes('gül') || gName.includes('kalp');
+  updateBattleAndMilestone(isBrideSide ? 'bride' : 'groom', (diamondCount || 1) * 3 * repeatCount, repeatCount);
 
   // 1. KURAL: PERFUME (Parfüm) -> GELİN OLMA
   if (gName.includes('perfume') || gName.includes('parfüm') || gName.includes('parfum') || gName.includes('swan') || gName.includes('kuğu')) {

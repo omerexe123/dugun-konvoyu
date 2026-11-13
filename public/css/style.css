@@ -42,29 +42,38 @@ body {
 }
 
 /* -------------------------------------------------------------
-   ÜST ORTA: GELİN ARABASININ ARKASINDAKİ LİDER (HUD)
+   ÜST ORTA: GELİN VS DAMAT SAVAŞI, HEDEF VE LİDER (HUD)
    ------------------------------------------------------------- */
-.hud-leader-badge {
+.hud-top-center-container {
   position: fixed;
-  top: 14px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  max-width: 95vw;
+}
+
+.hud-leader-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1.5px solid var(--accent-gold);
-  padding: 6px 22px;
+  padding: 4px 18px;
   border-radius: 9999px;
   color: #fbbf24;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 0 16px rgba(251, 191, 36, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   pointer-events: none;
   transition: all 0.2s ease;
@@ -73,6 +82,134 @@ body {
 .hud-leader-badge b {
   color: #fff;
   font-weight: 900;
+}
+
+.hud-battle-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.90);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  width: 380px;
+  max-width: 90vw;
+}
+
+.hud-battle-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.battle-team-avatar {
+  font-size: 16px;
+}
+
+.battle-team-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.battle-team-info.right {
+  align-items: flex-end;
+}
+
+.battle-team-label {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.team-bride .battle-team-label { color: #f472b6; }
+.team-groom .battle-team-label { color: #38bdf8; }
+
+.battle-team-score {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.team-bride .battle-team-score { color: #fb7185; }
+.team-groom .battle-team-score { color: #38bdf8; }
+
+.hud-battle-track {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 9999px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.battle-fill-bride {
+  height: 100%;
+  background: linear-gradient(90deg, #ec4899, #f43f5e);
+  transition: width 0.35s ease;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+}
+
+.battle-fill-groom {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  transition: width 0.35s ease;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+}
+
+.battle-divider {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 9px;
+  z-index: 2;
+  text-shadow: 0 0 4px #000;
+}
+
+/* Toplu Hedef Barı */
+.hud-milestone-box {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 9999px;
+  padding: 3px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 320px;
+  max-width: 85vw;
+}
+
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #fde047;
+}
+
+.milestone-progress-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.milestone-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24, #fef08a);
+  transition: width 0.35s ease;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.7);
 }
 
 /* -------------------------------------------------------------

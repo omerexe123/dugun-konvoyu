@@ -549,6 +549,10 @@ class ConvoyManager {
   // -------------------------------------------------------------
   // 5. KAMERA YÖNETİMİ (Otomatik Yönetmen + Sinematik Gezinme)
   // -------------------------------------------------------------
+  addTrauma(amount = 0.45) {
+    this.cameraTrauma = Math.min(1.0, (this.cameraTrauma || 0) + amount);
+  }
+
   focusCar(uniqueId, durationMs = 5000) {
     this.focusedCarId = uniqueId;
     this.focusUntil = Date.now() + durationMs;
@@ -561,12 +565,32 @@ class ConvoyManager {
 
   // Hediye Geldiğinde Kamerayı Odakla ve Mesafeyi Genişlet
   triggerGiftFocus(uniqueId, durationMs = 6500) {
+    this.addTrauma(0.50);
     this.focusCar(uniqueId, durationMs);
     this.giftFocusCarId = uniqueId;
     this.giftFocusUntil = Date.now() + durationMs;
     const cObj = this.convoyCars[uniqueId];
     if (cObj) {
       cObj.giftFocusUntil = Date.now() + durationMs;
+    }
+  }
+
+  // Toplu Düğün Hedefi Kutlaması (Havai Fişek & Ekran Sarsıntısı)
+  triggerMilestoneCelebration() {
+    this.addTrauma(0.75);
+    this.showBanner('🎆👑 DÜĞÜN HEDEFİ TAMAMLANDI! OTOYOL HAVAİ FİŞEK VE HALAY ŞOVU!', 'banner-galaxy', 8000, 'images/gifts/galaxy.webp');
+    if (this.audio) this.audio.startDavulZurnaTheme(15000);
+
+    // 6 ardışık havai fişek patlaması
+    if (window.highwayEngine) {
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          if (window.highwayEngine) {
+            window.highwayEngine.emitFireworks();
+            this.addTrauma(0.25);
+          }
+        }, i * 450);
+      }
     }
   }
 
@@ -591,6 +615,8 @@ class ConvoyManager {
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
+
+      this.applyCameraShake(dt);
       return;
     }
 
@@ -614,6 +640,8 @@ class ConvoyManager {
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
+
+      this.applyCameraShake(dt);
       return;
     }
 
@@ -649,6 +677,18 @@ class ConvoyManager {
         this.camera.position.set(0, 1.8, leadZ + 6.0);
         this.camera.lookAt(0, 1.0, leadZ - 20);
         break;
+    }
+
+    this.applyCameraShake(dt);
+  }
+
+  applyCameraShake(dt) {
+    if (this.cameraTrauma && this.cameraTrauma > 0) {
+      const shakePower = this.cameraTrauma * this.cameraTrauma;
+      this.camera.position.x += (Math.random() - 0.5) * 0.45 * shakePower;
+      this.camera.position.y += (Math.random() - 0.5) * 0.35 * shakePower;
+      this.camera.position.z += (Math.random() - 0.5) * 0.25 * shakePower;
+      this.cameraTrauma = Math.max(0, this.cameraTrauma - dt * 1.5);
     }
   }
 
@@ -760,9 +800,39 @@ class ConvoyManager {
       const distToTarget = Math.abs(effectiveTargetZ - currentZ);
       const lerpSpeed = THREE.MathUtils.clamp(distToTarget * 0.015 + 0.05, 0.04, 0.12);
 
+      const prevX = cObj.group.position.x;
+      const prevZ = cObj.group.position.z;
+
       cObj.group.position.x = THREE.MathUtils.lerp(currentX, effectiveTargetX, 0.08);
       cObj.group.position.z = THREE.MathUtils.lerp(currentZ, effectiveTargetZ, lerpSpeed);
+
+      // Gerçekçi Süspansiyon & Gövde Yatıșı (Body Roll, Pitch & Mikro Canlılık)
+      if (!cObj.isDrifting && !cObj.isBurnout && !cObj.isWheelie && !cObj.isOvertaking) {
+        const velX = (cObj.group.position.x - prevX) / Math.max(0.001, dt);
+        const velZ = (cObj.group.position.z - prevZ) / Math.max(0.001, dt);
+
+        // Şerit değiştirirken viraja yatma (Roll)
+        const targetRoll = THREE.MathUtils.clamp(-velX * (cObj.isMotor ? 0.32 : 0.07), -0.35, 0.35);
+        // Direksiyon burun açısı (Yaw)
+        const targetYaw = THREE.MathUtils.clamp(velX * (cObj.isMotor ? 0.22 : 0.04), -0.22, 0.22);
+        // İvme / Fren çökmesi (Pitch)
+        const accelZ = velZ - (cObj.lastVelZ || 0);
+        cObj.lastVelZ = velZ;
+        const targetPitch = THREE.MathUtils.clamp(-accelZ * 0.03, -0.04, 0.04);
+
+        cObj.group.rotation.z = THREE.MathUtils.lerp(cObj.group.rotation.z, targetRoll, 0.15);
+        cObj.group.rotation.y = THREE.MathUtils.lerp(cObj.group.rotation.y, targetYaw, 0.15);
+        cObj.group.rotation.x = THREE.MathUtils.lerp(cObj.group.rotation.x, targetPitch, 0.12);
+
+        // Asfalt mikro titreşimi
+        cObj.group.position.y = Math.sin((cObj.rankIdx || 1) * 2.1 + Date.now() * 0.008) * 0.006;
+      }
     });
+
+    // Gelin arabası mikro süspansiyon nefesi
+    if (this.leadCar) {
+      this.leadCar.position.y = Math.sin(Date.now() * 0.006) * 0.005;
+    }
 
     // 2. KESİN VE SERT ÇARPIŞMA / İÇ İÇE GİRME ENGELLEYİCİ (Hard Non-Penetration Clamp)
     // Fiziksel sınır: İki aracın gövdesi hiçbir zaman iç içe giremez!
