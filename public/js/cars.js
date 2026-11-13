@@ -807,30 +807,31 @@ const CarFactory = {
   // ===========================================================
   attachUnderglow(group, options = {}) {
     const isMotor = options.isMotor || false;
-    const width = isMotor ? 0.60 : 1.85;
-    const length = isMotor ? 1.30 : 3.50;
-    const sideX = 0.82;
-    const yGround = 0.035;
+    const width = isMotor ? 0.70 : 1.95;
+    const length = isMotor ? 1.45 : 3.65;
+    const yGround = 0.025;
 
     const neonContainer = new THREE.Group();
 
-    // Gerçekçi yumuşak neon ışık dokusu (Soft Radial Glow Canvas Texture)
+    // Gerçekçi yumuşak neon ışık dokusu (Soft Radial Glow Canvas Texture - Sıfır keskin sınır)
     if (!CarFactory.neonTexture && typeof document !== 'undefined') {
       const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 128;
+      canvas.width = 256;
+      canvas.height = 256;
       const ctx = canvas.getContext('2d');
-      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-      grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-      grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.65)');
-      grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.18)');
-      grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+      // Dış kenara ulaşmadan önce şeffaflığı %100 sıfırla, asfaltta asla dikdörtgen sınır kalmaz
+      const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 115);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+      grad.addColorStop(0.30, 'rgba(255, 255, 255, 0.70)');
+      grad.addColorStop(0.60, 'rgba(255, 255, 255, 0.28)');
+      grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.05)');
+      grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillRect(0, 0, 256, 256);
       CarFactory.neonTexture = new THREE.CanvasTexture(canvas);
     }
 
-    // 1. Asfalta Yayılan Difüze Yumuşak Neon Parıltısı (Zemine paralel)
+    // Asfalta Yayılan Difüze Yumuşak Neon Parıltısı (Zemine paralel, Additive Blending)
     const poolGeom = new THREE.PlaneGeometry(width, length);
     poolGeom.rotateX(-Math.PI / 2);
 
@@ -838,7 +839,7 @@ const CarFactory = {
       color: 0x00f0ff,
       map: CarFactory.neonTexture || null,
       transparent: true,
-      opacity: isMotor ? 0.60 : 0.82,
+      opacity: isMotor ? 0.55 : 0.75,
       depthWrite: false,
       blending: THREE.AdditiveBlending
     });
@@ -846,37 +847,17 @@ const CarFactory = {
     poolMesh.position.y = yGround;
     neonContainer.add(poolMesh);
 
-    // 2. Marşpiyel Altı Parlak Neon Tüpleri (Sadece ARABALAR İÇİNDİR, Motosiklette marşpiyel olmaz!)
-    let tubeMat = null;
-    if (!isMotor) {
-      const tubeGeom = new THREE.BoxGeometry(0.04, 0.03, length * 0.75);
-      tubeMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.90,
-        blending: THREE.AdditiveBlending
-      });
-
-      [-sideX, sideX].forEach(sx => {
-        const tube = new THREE.Mesh(tubeGeom, tubeMat);
-        tube.position.set(sx, yGround + 0.08, 0);
-        neonContainer.add(tube);
-      });
-    }
-
     neonContainer.visible = false;
     group.add(neonContainer);
 
     const neonState = {
       container: neonContainer,
       poolMat,
-      tubeMat,
       enabled: false,
       color: 0x00f0ff,
       setColor(hex) {
         this.color = typeof hex === 'string' ? parseInt(hex.replace('#', '0x'), 16) : hex;
         poolMat.color.setHex(this.color);
-        if (tubeMat) tubeMat.color.setHex(this.color);
       },
       setEnabled(flag) {
         this.enabled = !!flag;
