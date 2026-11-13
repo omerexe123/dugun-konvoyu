@@ -19,48 +19,8 @@ class HighwayEngine {
     this.skidMarkPool = [];
     this.activeSkidMarks = [];
 
-    // Gerçekçi PBR Fiziksel Materyaller
+    // Duman & Kıvılcım
     this.materials = {
-      roadAsphalt: new THREE.MeshStandardMaterial({
-        color: 0x16181c,
-        roughness: 0.85,
-        metalness: 0.08
-      }),
-      roadStripe: new THREE.MeshStandardMaterial({
-        color: 0xf8fafc,
-        roughness: 0.40,
-        metalness: 0.05
-      }),
-      curbStone: new THREE.MeshStandardMaterial({
-        color: 0x94a3b8,
-        roughness: 0.65,
-        metalness: 0.05
-      }),
-      sidewalk: new THREE.MeshStandardMaterial({
-        color: 0x334155,
-        roughness: 0.78,
-        metalness: 0.05
-      }),
-      grassVerge: new THREE.MeshStandardMaterial({
-        color: 0x14532d,
-        roughness: 0.90,
-        metalness: 0.02
-      }),
-      plazaWalk: new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        roughness: 0.75,
-        metalness: 0.08
-      }),
-      
-      // Aydınlatma
-      lampPole: new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        roughness: 0.35,
-        metalness: 0.85
-      }),
-      lampBulb: new THREE.MeshBasicMaterial({ color: 0xffedd5 }),
-
-      // Duman & Kıvılcım
       smokeWhite: new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.65 }),
       smokeDark: new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.75 }),
       sparkGold: new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
@@ -68,7 +28,6 @@ class HighwayEngine {
 
     this.initRoad();
     this.initCityModel();
-    this.initTreeModels();
     this.initConfetti();
     this.initParticlePool();
     this.initSkidMarkPool();
@@ -77,196 +36,25 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 1. Sonsuz 3 Şeritli Bulvar & Devasa Zemin İnşası
+  // 1. Sonsuz Şehir Zemin Tabanı (Karanlık Ufuk Düzlemi)
   // -------------------------------------------------------------
   initRoad() {
-    // 1600x1600m devasa ufuk zemin düzlemi
+    // Şehir modelinin altında derin karanlık taban
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshLambertMaterial({ color: 0x090d16 });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.36;
+    groundMesh.position.y = -0.35;
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
-
-    // 4 segment x 160m = 640 metrelik kesintisiz otoyol (Z: -320m ile +320m arası)
-    const segLength = 160;
-    for (let i = 0; i < 4; i++) {
-      const zOffset = (i * segLength) - (segLength * 1.5);
-      const segmentGroup = new THREE.Group();
-
-      this.buildBoulevardSegment(segmentGroup, segLength);
-      segmentGroup.position.z = zOffset;
-
-      this.scene.add(segmentGroup);
-      this.roadSegments.push(segmentGroup);
-    }
-  }
-
-  buildBoulevardSegment(g, length) {
-    const roadWidth = 12.0; // 3 Şeritli geniş cadde
-
-    // Asfalt Yol
-    const road = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.3, length), this.materials.roadAsphalt);
-    road.position.y = -0.15;
-    road.receiveShadow = true;
-    g.add(road);
-
-    // Beyaz Güvenlik Kenar Çizgileri
-    [-5.6, 5.6].forEach(ex => {
-      const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, length), this.materials.roadStripe);
-      edgeLine.position.set(ex, 0.01, 0);
-      edgeLine.receiveShadow = true;
-      g.add(edgeLine);
-    });
-
-    // Beyaz Kesikli Şerit Çizgileri (-3.8 ve +3.8 şerit sınırları)
-    [-1.9, 1.9].forEach(lx => {
-      for (let sz = -length / 2 + 5; sz <= length / 2 - 5; sz += 9) {
-        const dash = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 5.2), this.materials.roadStripe);
-        dash.position.set(lx, 0.01, sz);
-        dash.receiveShadow = true;
-        g.add(dash);
-      }
-    });
-
-    // Yaya Geçitleri (Zebra)
-    [-40, 40].forEach(zz => {
-      for (let zx = -5.0; zx <= 5.0; zx += 1.25) {
-        const zebra = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.02, 3.8), this.materials.roadStripe);
-        zebra.position.set(zx, 0.015, zz);
-        zebra.receiveShadow = true;
-        g.add(zebra);
-      }
-    });
-
-    // Sağ ve Sol Kaldırımlar, Park Şeritleri, Ağaçlar & Sokak Lambaları (Boşluksuz 26m Kesintisiz Zemin)
-    [-1, 1].forEach(side => {
-      const dirX = side;
-      // Bordür Taşı (6.0m - 6.4m)
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, length), this.materials.curbStone);
-      curb.position.set(dirX * 6.2, 0.14, 0);
-      curb.castShadow = true;
-      curb.receiveShadow = true;
-      g.add(curb);
-
-      // Yaya Kaldırımı (6.4m - 13.4m, Genişlik: 7.0m)
-      const walk = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.22, length), this.materials.sidewalk);
-      walk.position.set(dirX * 9.9, 0.11, 0);
-      walk.receiveShadow = true;
-      g.add(walk);
-
-      // Ağaçlı Yeşil Şerit (13.4m - 18.4m, Genişlik: 5.0m)
-      const verge = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.24, length), this.materials.grassVerge);
-      verge.position.set(dirX * 15.9, 0.12, 0);
-      verge.receiveShadow = true;
-      g.add(verge);
-
-      // Gökdelen Önü Granit Meydan / Plaza (18.4m - 26.0m, Genişlik: 7.6m)
-      const plaza = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.20, length), this.materials.plazaWalk);
-      plaza.position.set(dirX * 22.2, 0.10, 0);
-      plaza.receiveShadow = true;
-      g.add(plaza);
-
-      // Modern Sokak Lambaları (Kaldırım kenarında dirX * 6.7)
-      for (let tz = -length / 2 + 15; tz <= length / 2 - 15; tz += 24) {
-        const lamp = this.createStreetLamp(dirX);
-        lamp.position.set(dirX * 6.7, 0.2, tz);
-        g.add(lamp);
-      }
-    });
   }
 
   // -------------------------------------------------------------
-  // 1.2 Gerçek 3D Ağaçların (tree_large & tree_small) Yüklenmesi
-  // -------------------------------------------------------------
-  initTreeModels() {
-    this.treeTemplates = [];
-    if (typeof THREE.GLTFLoader === 'undefined') return;
-
-    if (HighwayEngine.cachedTrees && HighwayEngine.cachedTrees.length === 2) {
-      this.treeTemplates = HighwayEngine.cachedTrees;
-      this.populateTrees();
-      return;
-    }
-
-    const loader = new THREE.GLTFLoader();
-    ['models/tree_large.glb', 'models/tree_small.glb'].forEach((path, idx) => {
-      loader.load(path, gltf => {
-        const treeScene = gltf.scene;
-        // 60 FPS: Ağaç gölge haritası hesaplamalarını kapatarak performansı koru
-        treeScene.traverse(ch => {
-          if (ch.isMesh) {
-            ch.castShadow = false;
-            ch.receiveShadow = false;
-            ch.frustumCulled = true;
-            if (ch.material) {
-              ch.material.roughness = 0.85;
-            }
-          }
-        });
-        const box = new THREE.Box3().setFromObject(treeScene);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const targetH = idx === 0 ? 7.2 : 5.0;
-        const s = targetH / (size.y || 1);
-        treeScene.scale.set(s, s, s);
-
-        this.treeTemplates.push(treeScene);
-        if (this.treeTemplates.length === 2) {
-          HighwayEngine.cachedTrees = this.treeTemplates;
-          this.populateTrees();
-        }
-      }, undefined, err => {
-        console.warn('[HighwayEngine] Ağaç yükleme uyarısı:', err.message);
-      });
-    });
-  }
-
-  populateTrees() {
-    if (!this.treeTemplates || this.treeTemplates.length === 0) return;
-    this.roadSegments.forEach(seg => {
-      [-1, 1].forEach(side => {
-        for (let tz = -70; tz <= 70; tz += 18) {
-          const tmpl = this.treeTemplates[Math.abs(tz) % 2];
-          if (!tmpl) continue;
-          const tree = tmpl.clone(true);
-          tree.position.set(side * 15.9, 0.12, tz + (Math.sin(tz) * 1.5));
-          tree.rotation.y = (Math.abs(tz) * 0.7) % (Math.PI * 2);
-          seg.add(tree);
-        }
-      });
-    });
-  }
-
-  createStreetLamp(dirX) {
-    const lamp = new THREE.Group();
-
-    // Dikey Direk (60 FPS için hafif gölgesiz metal)
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 5.2, 6), this.materials.lampPole);
-    pole.position.y = 2.6;
-    lamp.add(pole);
-
-    // Yola doğru uzanan yatay eğik kol
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.08), this.materials.lampPole);
-    arm.position.set(-dirX * 0.7, 5.15, 0);
-    lamp.add(arm);
-
-    // Işıklı Armatür Başlığı
-    const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.22), this.materials.lampBulb);
-    bulb.position.set(-dirX * 1.35, 5.08, 0);
-    lamp.add(bulb);
-
-    return lamp;
-  }
-
-  // -------------------------------------------------------------
-  // 2. 3D Şehir Modeli (beautiful_city.glb) - Kusursuz Birebir Entegrasyon & Sıfır Takılma
+  // 2. 3D Şehir Modeli (beautiful_city.glb) - Birebir Gerçek Cadde & 60 FPS
   // -------------------------------------------------------------
   initCityModel() {
     if (typeof THREE.GLTFLoader === 'undefined') return;
 
-    // Önbellekte varsa tekrar GLTF parse edip sayfayı dondurma!
     if (HighwayEngine.cachedCity) {
       this.setupCityBlocks(HighwayEngine.cachedCity);
       return;
@@ -281,12 +69,13 @@ class HighwayEngine {
       const baseScene = gltf.scene;
 
       // 60 FPS KİLİT OPTİMİZASYON:
-      // Statik binaların shadow map'e render edilmesi yasak (kasıntı ve drop yok).
-      // matrixAutoUpdate=false ile CPU'da gereksiz matris hesaplamalarını iptal et.
+      // Gölge haritasını boğmamak için binaların gölge atmasını kapat.
+      // Asfalt ve yollar araçların gölgesini alsın.
+      // Statik meshlerin matrixAutoUpdate'ini kapatıp tek seferde hesapla.
       baseScene.traverse(ch => {
         if (ch.isMesh) {
           ch.castShadow = false;
-          ch.receiveShadow = false;
+          ch.receiveShadow = true;
           ch.frustumCulled = true;
           ch.matrixAutoUpdate = false;
           ch.updateMatrix();
@@ -294,14 +83,14 @@ class HighwayEngine {
           // PBR Doku ve Malzeme Kalitesini Koru
           if (ch.material) {
             ch.material.roughness = THREE.MathUtils.clamp(ch.material.roughness ?? 0.7, 0.45, 0.85);
-            ch.material.metalness = THREE.MathUtils.clamp(ch.material.metalness ?? 0.1, 0.05, 0.4);
+            ch.material.metalness = THREE.MathUtils.clamp(ch.material.metalness ?? 0.1, 0.05, 0.35);
           }
         }
       });
 
       HighwayEngine.cachedCity = baseScene;
       this.setupCityBlocks(baseScene);
-      console.log('[HighwayEngine] 3D beautiful_city.glb başarıyla caddeye yerleştirildi!');
+      console.log('[HighwayEngine] 3D beautiful_city.glb ana cadde olarak yerleştirildi!');
     }, undefined, err => {
       HighwayEngine.isLoadingCity = false;
       console.warn('[HighwayEngine] beautiful_city.glb yükleme uyarısı:', err.message);
@@ -309,49 +98,48 @@ class HighwayEngine {
   }
 
   setupCityBlocks(baseScene) {
-    const box = new THREE.Box3().setFromObject(baseScene);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
+    // beautiful_city.glb model analiz parametreleri:
+    // Orijinal modelde cadde X ekseni boyunca uzanır, genişlik Z eksenidir.
+    // Cadde Z merkezi: 0.713876
+    // Cadde asfalt kotu (Y): -0.490819
+    // Cadde X merkezi: -4.500996, uzunluk: 17.104088 birim
+    //
+    // Konvoy için ölçek: s = 8.0
+    // Cadde şerit çizgileri: X = -4.73m ve X = +4.73m (9.46m net asfalt genişliği)
+    // 3 Şeritli konvoy (-2.85m, 0m, +2.85m) caddenin tam ortasına oturur!
+    // Binalar sol tarafta X < -8.7m, sağ tarafta X > +9.7m mesafededir.
+    const s = 8.0;
+    const zRoadCenter = 0.713876;
+    const yRoadSurface = -0.490819;
+    const xRoadCenter = -4.500996;
+    const blockLength = 17.104088 * s; // 136.83m
 
-    // Binaları bulvar boyunca gerçekçi ölçekte (~75 metre yükseklik) ve kesintisiz diz
-    const targetHeight = 75.0;
-    const s = targetHeight / (size.y || 1);
-    const blockLength = Math.max(90.0, (size.z || 1) * s);
     this.cityLoopLength = blockLength;
 
-    // Bulvar kenarından mesafe: Cadde 12m + Kaldırımlar ve yeşil şerit 14m = x=±26m
-    const roadOffset = 26.0 + (size.x * s * 0.35);
-
-    // 6 Blok: 3 Sol, 3 Sağ (Kesintisiz Ufuk Çizgisi)
-    const blockConfigs = [
-      // Sol Taraf (Bulvara dönük)
-      { x: -roadOffset, z: -blockLength, rotY: 0 },
-      { x: -roadOffset, z: 0, rotY: 0 },
-      { x: -roadOffset, z: blockLength, rotY: 0 },
-
-      // Sağ Taraf (Yansımalı bulvara dönük)
-      { x: roadOffset, z: -blockLength, rotY: Math.PI },
-      { x: roadOffset, z: 0, rotY: Math.PI },
-      { x: roadOffset, z: blockLength, rotY: Math.PI }
-    ];
+    // 3 Blok arka arkaya dizilerek kesintisiz 410 metrelik sonsuz cadde oluşturulur
+    const blockZPositions = [-blockLength, 0, blockLength];
 
     // Eski bloklar varsa temizle
     this.cityBlocks.forEach(b => this.scene.remove(b));
     this.cityBlocks = [];
 
-    blockConfigs.forEach(cfg => {
+    blockZPositions.forEach(zPos => {
       const blockGroup = new THREE.Group();
 
       const clone = baseScene.clone(true);
+      // Caddeyi dünya koordinatlarında Z eksenine döndür (-90 derece):
+      clone.rotation.y = -Math.PI / 2;
       clone.scale.set(s, s, s);
-      // Modele göre tabanı tam y=0 asfalt seviyesine ve merkeze oturt
-      clone.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+
+      // Caddeyi tam konvoyun altına (X=0) ve asfalt kotuna (Y=0) oturt:
+      clone.position.set(
+        zRoadCenter * s,
+        -yRoadSurface * s,
+        -xRoadCenter * s
+      );
 
       blockGroup.add(clone);
-      blockGroup.position.set(cfg.x, 0, cfg.z);
-      blockGroup.rotation.y = cfg.rotY;
+      blockGroup.position.set(0, 0, zPos);
 
       this.scene.add(blockGroup);
       this.cityBlocks.push(blockGroup);
@@ -631,17 +419,18 @@ class HighwayEngine {
   }
 
   emitSkidMarks(carId, worldPos, yawAngle = 0, isMotor = false) {
-    // Aracın bulunduğu en yakın yol segmentini bul
-    let bestSeg = this.roadSegments[0];
-    let minDist = Math.abs(worldPos.z - bestSeg.position.z);
-    for (let i = 1; i < this.roadSegments.length; i++) {
-      const d = Math.abs(worldPos.z - this.roadSegments[i].position.z);
+    // Aracın bulunduğu en yakın şehir cadde bloğunu bul
+    if (!this.cityBlocks || this.cityBlocks.length === 0) return;
+    let bestBlock = this.cityBlocks[0];
+    let minDist = Math.abs(worldPos.z - bestBlock.position.z);
+    for (let i = 1; i < this.cityBlocks.length; i++) {
+      const d = Math.abs(worldPos.z - this.cityBlocks[i].position.z);
       if (d < minDist) {
         minDist = d;
-        bestSeg = this.roadSegments[i];
+        bestBlock = this.cityBlocks[i];
       }
     }
-    if (!bestSeg) return;
+    if (!bestBlock) return;
 
     // Arka tekerleklerin dünya konumları (açıya göre)
     const cosY = Math.cos(yawAngle);
@@ -660,13 +449,13 @@ class HighwayEngine {
     offsets.forEach((off, idx) => {
       const wx = worldPos.x + off.x;
       const wz = worldPos.z + off.z;
-      const curLocalX = wx;
-      const curLocalZ = wz - bestSeg.position.z;
+      const curLocalX = wx - bestBlock.position.x;
+      const curLocalZ = wz - bestBlock.position.z;
       const key = `${carId || 'c'}_${idx}`;
 
       const prev = this.lastWheelPositions[key];
-      if (!prev || prev.seg !== bestSeg) {
-        this.lastWheelPositions[key] = { x: curLocalX, z: curLocalZ, seg: bestSeg };
+      if (!prev || prev.seg !== bestBlock) {
+        this.lastWheelPositions[key] = { x: curLocalX, z: curLocalZ, seg: bestBlock };
         return;
       }
 
@@ -687,13 +476,13 @@ class HighwayEngine {
       mark.visible = true;
       mark.material.opacity = 0.92;
       mark.scale.set(1.0, 1.0, dist + 0.35);
-      mark.position.set(midX, 0.015, midZ);
+      mark.position.set(midX, 0.025, midZ);
       mark.rotation.y = trackAngle;
-      mark.userData = { life: 9.0, seg: bestSeg };
+      mark.userData = { life: 9.0, seg: bestBlock };
 
-      if (mark.parent !== bestSeg) {
+      if (mark.parent !== bestBlock) {
         if (mark.parent) mark.parent.remove(mark);
-        bestSeg.add(mark);
+        bestBlock.add(mark);
       }
       this.activeSkidMarks.push(mark);
 
@@ -714,16 +503,8 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 1. Asfalt Bulvar Segmentlerini Döndür (640m kesintisiz sonsuz döngü)
-    this.roadSegments.forEach(seg => {
-      seg.position.z -= moveDist;
-      if (seg.position.z < -320) {
-        seg.position.z += 640;
-      }
-    });
-
-    // 2. 3D Şehir Bloklarını Akıcı Döndür (Kesintisiz Ufuk Çizgisi)
-    const loopLen = this.cityLoopLength || 90.0;
+    // 1. 3D Şehir & Cadde Bloklarını Sonsuz Döngüde Akıcı Kaydır (410m kesintisiz)
+    const loopLen = this.cityLoopLength || 136.83;
     const minZ = -loopLen * 1.5;
     const wrapDistance = loopLen * 3.0;
 

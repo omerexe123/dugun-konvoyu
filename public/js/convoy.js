@@ -660,7 +660,7 @@ class ConvoyManager {
         this.camera.lookAt(0, 0, leadZ - 4);
         break;
       case 4: // Yol Kenarı Radar / Dron
-        this.camera.position.set(-11, 4.2, leadZ + 8);
+        this.camera.position.set(-5.2, 3.8, leadZ + 8);
         this.camera.lookAt(0, 1.0, leadZ - 6);
         break;
       case 5: // Odak Takip
