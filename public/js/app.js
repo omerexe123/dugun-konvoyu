@@ -5,10 +5,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('canvas-container');
 
-  // 1. Three.js Sahnesi & Kamera (Canlı Şehir Bulvarı)
+  // 1. Three.js Sahnesi & Kamera (Gündüz Aydınlığı)
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0f172a); // Slate-900 Gece Gökyüzü
-  scene.fog = new THREE.FogExp2(0x0f172a, 0.0035);
+  scene.background = new THREE.Color(0x38bdf8); // Parlak Gündüz Gökyüzü
+  scene.fog = new THREE.FogExp2(0x38bdf8, 0.0020);
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 500);
   camera.position.set(0, 11, 24);
@@ -131,8 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
         this.time = (this.time + dt * this.speed) % 24.0;
       } else if (this.mode === 'day') {
         this.time = 12.0;
-      }
-        this.time = (this.time + dt * this.speed) % 24.0;
       }
 
       const h = this.time;
