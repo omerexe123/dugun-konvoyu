@@ -68,16 +68,25 @@ const CarFactory = {
     const fileList = Array.from(filesToLoad);
     let loaded = 0;
 
-    fileList.forEach(f => {
+    // Donmayı önlemek için modeller aynı anda değil, 2 paralel kuyrukla indirilir
+    const queue = fileList.slice();
+    const pump = () => {
+      const f = queue.shift();
+      if (!f) return;
       loader.load(
         f,
         gltf => {
           this.gltfCache[f] = gltf.scene;
           loaded++;
+          pump();
           // Model yüklenir yüklenmez bekletmeden anında sahneyi güncelle
-          if (window.convoy && typeof window.convoy.reloadAllCars === 'function') {
-            window.convoy.reloadAllCars();
-          }
+          // Tüm arabaları her modelde baştan kurmak yerine toplu (debounce) yenile
+          clearTimeout(this._reloadTimer);
+          this._reloadTimer = setTimeout(() => {
+            if (window.convoy && typeof window.convoy.reloadAllCars === 'function') {
+              window.convoy.reloadAllCars();
+            }
+          }, 400);
           if (loaded === fileList.length) {
             this.isLoaded = true;
             this.isLoading = false;
@@ -86,6 +95,7 @@ const CarFactory = {
         },
         undefined,
         err => {
+          pump();
           console.warn(`[CarFactory] Model yükleme hatası (${f}):`, err.message);
           loaded++;
           if (loaded === fileList.length) {
@@ -94,7 +104,9 @@ const CarFactory = {
           }
         }
       );
-    });
+    };
+    pump();
+    pump();
   },
 
   // Kernel seviyesinde evrensel GLB Bounding Box ve Yön Düzelticisi
