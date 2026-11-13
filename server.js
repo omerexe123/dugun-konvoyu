@@ -209,7 +209,6 @@ const app = express();
 app.use(compression({
   threshold: 1024,
   level: 6,
-  // 3D model/ses/resimler zaten sıkışık; Railway CPU'sunu gereksiz yormasın
   filter: (req, res) => {
     if (/\.(glb|png|jpe?g|mp3|webp)(\?|$)/i.test(req.url)) return false;
     return compression.filter(req, res);

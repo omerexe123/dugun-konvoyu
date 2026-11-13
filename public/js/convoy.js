@@ -946,7 +946,8 @@ class ConvoyManager {
     const baseWheelSpeed = ((window.highwayEngine ? window.highwayEngine.scrollSpeed : 38.0) / 0.33);
     if (this.leadCar && this.leadCar.userData.wheels) {
       this.leadCar.userData.wheels.forEach(w => {
-        w.rotateX(baseWheelSpeed * dt);
+        const spinDir = (w.position && w.position.x < 0) ? -1 : 1;
+        w.rotateX(baseWheelSpeed * spinDir * dt);
       });
     }
 
@@ -962,7 +963,16 @@ class ConvoyManager {
       if (carWheels && carWheels.length > 0) {
         const mult = cObj.isBurnout ? 4.2 : (cObj.isDrifting ? 2.0 : 1.0);
         carWheels.forEach(w => {
-          w.rotateX(baseWheelSpeed * mult * dt);
+          if (!w) return;
+          // KERNEL GÜVENLİK SHIELD:
+          // Sadece doğrulanmış bağımsız aks merkezine sahip tekerlekler döner.
+          // Pivotu (0,0,0)'da olan parçalar ASLA döndürülmez (tekerleğin motora batmasını/tavana fırlamasını %100 engeller)!
+          if (w.userData && w.userData.spinAxis === 'x') {
+            w.rotateX(baseWheelSpeed * mult * dt);
+          } else if (w.position && Math.hypot(w.position.x, w.position.z) > 0.40) {
+            const spinDir = (w.position.x < 0) ? -1 : 1;
+            w.rotateX(baseWheelSpeed * mult * spinDir * dt);
+          }
         });
       }
     });

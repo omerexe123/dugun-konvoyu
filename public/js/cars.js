@@ -202,15 +202,15 @@ const CarFactory = {
   },
 
   // Kernel Seviyesinde Model Bütünlüğünü Koruyan Evrensel Tekerlek Motoru
-  // Tüm araba ve motosikletlerin (VW, Mercedes C220, BMW, Honda vb.)
-  // tekerleklerini kendi aks merkezinde kusursuz döndürür, tavana fırlamayı %100 engeller.
+  // YALNIZCA kendi yerel aks merkezine (pivot) sahip gerçek tekerlek akslarını seçer.
+  // Pivotu (0,0,0)'da olan modelleri asla döndürmez; tavana fırlamayı veya motora batmayı %100 engeller.
   setupVehicleWheels(container, isMotor = false) {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|roda|jerez|alloy|dianteir|traseir|pneu).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
-    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy/i;
-    // Bütün arabayı veya birden fazla tekeri içeren üst montaj kök grupları (bunları atla, altındaki 4 teker aksını seç)
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|wheel_rf|wheel_lr|wheel_rr|roda|jerez|alloy|dianteir|traseir|pneu).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
+    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy|holder/i;
+    // Bütün arabayı veya birden fazla tekeri içeren üst montaj kök grupları (bunları atla)
     const rootAssemblyRegex = /^(wheels?(\.\d+)?(_\d+)?|belvedere_18_\d+|jerez_19_\d+|alloy_15_\d+|scene.*)$/i;
 
     const candidates = [];
@@ -221,34 +221,48 @@ const CarFactory = {
       if (blacklistRegex.test(name)) return;
       if (rootAssemblyRegex.test(name)) return;
 
-      // 1. Düğüm adı kuralı
       if (wheelNodeRegex.test(name)) {
         candidates.push(ch);
-        return;
-      }
-
-      // 2. Malzeme bazlı (Yamaha, BMW M5, Mercedes vb. modeller)
-      if (ch.isMesh && ch.material) {
-        const mat = ch.material;
-        const matName = (Array.isArray(mat) ? mat.map(m => m.name).join(' ') : (mat.name || '')).toLowerCase();
-        if (/front_tire|rear_tire|tire1mtl|felge|a45s_tires|rims\b/i.test(matName)) {
-          candidates.push(ch);
-        }
       }
     });
 
-    // Filtre: En üst seviyedeki tekil tekerlek aksını (FL, FR, RL, RR) koru!
-    // Eğer bir adayın üst ebeveyni zaten adaylar arasındaysa alt parçayı (jant, vida, kapak) dahil etme
+    // Filtre: En üst seviyedeki tekil tekerlek aksını koru
     const filtered = candidates.filter(cand => {
       let p = cand.parent;
       while (p && p !== container) {
-        if (candidates.includes(p)) return false; // Üst montaj zaten listede, alt parçayı çift döndürme
+        if (candidates.includes(p)) return false;
         p = p.parent;
       }
       return true;
     });
 
+    // KERNEL GÜVENLİK KİLİDİ:
+    // Bir tekerlek düğümü YALNIZCA kendi yerel aks merkezine (pivot) sahipse döndürülebilir!
+    // Eğer düğümün konumu (0, 0, 0) ise (yani araç gövde merkezinde ise), onu döndürmek
+    // tekerleği aracın etrafında 1 metrelik devasa bir çemberde döndürerek motora/tavana fırlatır!
     filtered.forEach(cand => {
+      // 1. Procedural tekerlekler (S2000 vb.) her zaman güvenlidir:
+      if (cand.userData && cand.userData.spinAxis) {
+        wheels.push(cand);
+        return;
+      }
+
+      // 2. Düğümün araç gövdesi içindeki gerçek yerel pozisyonunu kontrol et
+      const pos = cand.position;
+      const distFromCenter = Math.hypot(pos.x, pos.z);
+
+      // Tekerlek aksı araba veya motorda ASLA (0, 0, 0) noktasında olamaz!
+      // En az 0.40 metre uzakta (Z ekseninde ön/arka veya X ekseninde sağ/sol) olmalıdır!
+      if (distFromCenter < 0.40) {
+        // Pivot merkezde (0,0,0) olduğu için bu düğümü döndürme! Modelin orijinal bütünlüğünü koru!
+        return;
+      }
+
+      // Tekerlek dikeyde zemin hizasında olmalıdır (0.08m - 1.20m arası)
+      if (pos.y < 0.08 || pos.y > 1.20) {
+        return;
+      }
+
       wheels.push(cand);
     });
 
