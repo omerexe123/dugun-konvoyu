@@ -181,8 +181,9 @@ const CarFactory = {
   },
 
   // Kernel Seviyesinde Model Bütünlüğünü Koruyan Tekerlek Kontrolü
-  // Sadece pivot noktası tekerleğin merkezinde olan gerçek tekerlekleri seçer.
-  // Eksantrik, ayrık veya yanlış parent'lı nesnelerin havada uçuşmasını engeller.
+  // Sadece bağımsız dönme aksı tasarlanmış temiz tekerlek düğümlerini seçer.
+  // Rig edilmemiş showroom modellerinde (Jetta, Golf, Mercedes, Ninja vb.) tekerleklerin
+  // tavana fırlamasını veya fren disklerinin havada uçuşmasını kesin olarak engeller.
   setupVehicleWheels(container, isMotor = false) {
     const wheels = [];
     if (!container) return wheels;
@@ -190,62 +191,8 @@ const CarFactory = {
     container.traverse(ch => {
       if (!ch) return;
       const name = (ch.name || '').toLowerCase();
-      // İç mekan, gösterge, ayna, direksiyon, kapı, tampon, trim veya tekerlek korumalarını kesinlikle atla
-      if (/steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl/i.test(name)) return;
-      
-      // Tekerlekler grubu (bütün arabayı içeren ana parent node'u atla)
-      if (name === 'wheels' || name === 'wheels_17' || name === 'wheels.001' || name === 'wheels_203') return;
-
-      if (/wheel|tire|\brim\b|tyre|teker/i.test(name)) {
-        // En dış ebeveyn tekerlek node'unu seç (iç içe meshleri çift döndürmemek için)
-        let parent = ch.parent;
-        let isChildOfWheel = false;
-        while (parent && parent !== container) {
-          const pName = (parent.name || '').toLowerCase();
-          if (pName !== 'wheels' && pName !== 'wheels_17' && pName !== 'wheels.001' && pName !== 'wheels_203' && /wheel|tire|\brim\b|tyre|teker/i.test(pName)) {
-            isChildOfWheel = true;
-            break;
-          }
-          parent = parent.parent;
-        }
-        if (isChildOfWheel) return;
-
-        // KRİTİK MATEMATİKSEL KONTROL: Pivot noktası tekerleğin merkezinde mi?
-        // Eğer pivot tekerlek merkezinden uzaktaysa (örn. motosikletin (0,0,0) kök noktasındaysa),
-        // döndürmek parçayı araçtan koparır ve havada uçurur!
-        try {
-          const box = new THREE.Box3();
-          const origPos = ch.position.clone();
-          const origRot = ch.rotation.clone();
-          ch.position.set(0, 0, 0);
-          ch.rotation.set(0, 0, 0);
-          ch.updateMatrix();
-          ch.updateWorldMatrix(false, true);
-
-          box.setFromObject(ch);
-
-          ch.position.copy(origPos);
-          ch.rotation.copy(origRot);
-          ch.updateMatrix();
-          ch.updateWorldMatrix(false, true);
-
-          const center = new THREE.Vector3();
-          box.getCenter(center);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const radius = Math.max(size.y, size.z) * 0.5;
-
-          if (radius > 0.05) {
-            const offDist = Math.hypot(center.y, center.z);
-            // Merkezden sapma teker yarıçapının %25'inden fazlaysa eksantriktir, döndürme!
-            if ((offDist / radius) > 0.25) {
-              return;
-            }
-          }
-        } catch (e) {
-          return;
-        }
-
+      // Yalnızca bağımsız dönebilen standart aks düğümlerini kabul et:
+      if (/^wheel-(front|back|rear)(-(left|right))?$/i.test(name)) {
         wheels.push(ch);
       }
     });

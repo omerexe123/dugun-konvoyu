@@ -2,3 +2,5 @@ node_modules/
 araba modelleri/
 .DS_Store
 *.log
+*.mov
+*.mp4
