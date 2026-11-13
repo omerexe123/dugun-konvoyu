@@ -496,19 +496,19 @@ body {
   will-change: transform;
 }
 
-/* 1. Yuvarlak Profil Avatarı (Kompakt ve Sade) */
+/* 1. Yuvarlak Profil Avatarı (Yarı Yarıya Büyütülmüş, Canlı ve Net) */
 .plate-avatar-wrap {
   position: relative;
-  width: 26px;
-  height: 26px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  padding: 1.5px;
+  padding: 2px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(148, 163, 184, 0.7));
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
 
 .plate-avatar-img {
@@ -523,71 +523,72 @@ body {
 /* Lider Taç Rozeti */
 .plate-crown {
   position: absolute;
-  top: -7px;
-  right: -5px;
-  font-size: 11px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+  top: -9px;
+  right: -6px;
+  font-size: 15px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
   z-index: 2;
 }
 
 /* Kategoriye Göre Glow Çemberleri */
 .plate-lead .plate-avatar-wrap {
   background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .plate-motor .plate-avatar-wrap {
   background: linear-gradient(135deg, #38bdf8, #0284c7, #2563eb);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.4);
 }
 
 .plate-car .plate-avatar-wrap {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(148, 163, 184, 0.75));
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.45), inset 0 0 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.55), inset 0 0 3px rgba(0, 0, 0, 0.3);
 }
 
-/* 2. Dairenin Hemen Altında Kullanıcı İsmi (Kompakt ve Net Okunur) */
+/* 2. Dairenin Hemen Altında Kullanıcı İsmi (Yarı Yarıya Büyütülmüş ve Kristal Netlikte) */
 .plate-nick-tag {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
   color: #ffffff;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   white-space: nowrap;
-  max-width: 80px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
   line-height: 1.15;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .plate-lead .plate-nick-tag {
   color: #fef08a;
-  border-color: rgba(251, 191, 36, 0.4);
+  border-color: rgba(251, 191, 36, 0.5);
 }
 
 .plate-motor .plate-nick-tag {
   color: #e0f2fe;
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(56, 189, 248, 0.5);
 }
 
-/* 3. Kompakt Araç & Puan Bilgisi */
+/* 3. Araç & Puan Bilgisi Rozeti */
 .plate-sub-badge {
-  font-size: 7.5px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 0.5px 4px;
+  padding: 1.5px 6px;
   border-radius: 9999px;
-  margin-top: 1px;
+  margin-top: 2px;
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.65);
-  color: #cbd5e1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  line-height: 1.1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  line-height: 1.15;
 }
 
 .badge-lead-sub {

@@ -139,12 +139,13 @@ class ConvoyManager {
   spawnOrUpdateCar(user, rankIdx = 0) {
     let cObj = this.convoyCars[user.uniqueId];
 
-    // 3 Şeritli Doğal Konvoy Dizilimi (-2.85: Sol, 0: Orta, 2.85: Sağ)
-    const laneOffsetsX = [0, 2.85, -2.85];
+    // 3 Şeritli Prestijli ve Geniş Konvoy Dizilimi
+    // Şeritler: 0: Orta Şerit (0m), 1: Sağ Şerit (2.95m), 2: Sol Şerit (-2.95m)
+    const laneOffsetsX = [0, 2.95, -2.95];
     const targetX = laneOffsetsX[rankIdx % 3];
-    // Artırılmış ferah konvoy aralığı: Araçlar arası mesafe artırıldı, iç içe girmeyi engeller
-    // Sıra başı 14.5m ferah aralık, şerit kademesi 4.2m
-    const targetZ = -10.0 - Math.floor(rankIdx / 3) * 14.5 - (rankIdx % 3) * 4.2;
+    // Artırılmış devasa ferah konvoy mesafesi: Arabalar ve motorlar asla iç içe giremez
+    // Gelin arabası arkasında 26m VIP güvenlik koridoru, sıra başı 24.0m ferah aralık, şerit kademesi 7.5m
+    const targetZ = -26.0 - Math.floor(rankIdx / 3) * 24.0 - (rankIdx % 3) * 7.5;
 
     const isMotorcycle = user.vehicleType === 'motor';
 
@@ -557,14 +558,21 @@ class ConvoyManager {
     const now = Date.now();
     const isFocusActive = this.focusedCarId && (now < this.focusUntil) && this.convoyCars[this.focusedCarId];
 
-    // Kamera Manuel Modda Bile Olsa Hediye Odağında Araca Zoom Yap
+    // Hediye Odağında Geniş, Sinematik ve Uzak Takip (Asla arabanın içine zoom yapmaz!)
     if (isFocusActive) {
       const fPos = this.convoyCars[this.focusedCarId].group.position;
-      const targetCamPos = new THREE.Vector3(fPos.x + 3.2, fPos.y + 2.2, fPos.z + 6.6);
-      const targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 0.8, fPos.z - 1.2);
+      this.idleTimer += dt;
 
-      this.currentCamPos.lerp(targetCamPos, 0.08);
-      this.currentCamLook.lerp(targetLookAt, 0.08);
+      // Araçlar birbirinden uzak olduğu için kamera uzakta ve yüksekte kalır, odak onda olur!
+      const camDist = 26.0;
+      const camHeight = 9.5 + Math.sin(this.idleTimer * 0.25) * 1.5;
+      const camX = fPos.x * 0.35 + Math.sin(this.idleTimer * 0.20) * 2.2;
+
+      const targetCamPos = new THREE.Vector3(camX, camHeight, fPos.z + camDist);
+      const targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 1.2, fPos.z - 4.5);
+
+      this.currentCamPos.lerp(targetCamPos, 0.05);
+      this.currentCamLook.lerp(targetLookAt, 0.05);
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
@@ -575,21 +583,21 @@ class ConvoyManager {
 
     // Otomatik Yönetmen Modu (cameraMode === 0)
     if (this.cameraMode === 0) {
-      // Hediye Yoksa Boşta Sinematik Gezinme (Bina duvarlarına çarpmayan güvenli bulvar koridoru)
+      // Hediye Yoksa Boşta Sinematik ve Geniş Bulvar Gezinmesi
       this.idleTimer += dt;
-      const orbitAngle = this.idleTimer * 0.22;
-      const orbitRadius = 14.0 + Math.sin(this.idleTimer * 0.15) * 3.0;
-      const camY = 5.2 + Math.sin(this.idleTimer * 0.2) * 1.6;
+      const orbitAngle = this.idleTimer * 0.16;
+      const orbitRadius = 24.0 + Math.sin(this.idleTimer * 0.10) * 4.0;
+      const camY = 8.2 + Math.sin(this.idleTimer * 0.14) * 1.8;
 
       const targetCamPos = new THREE.Vector3(
-        Math.sin(orbitAngle) * 3.6,
+        Math.sin(orbitAngle) * 3.4,
         camY,
         leadZ + orbitRadius
       );
-      const targetLookAt = new THREE.Vector3(0, 1.2, leadZ - 6.0);
+      const targetLookAt = new THREE.Vector3(0, 1.3, leadZ - 8.0);
 
-      this.currentCamPos.lerp(targetCamPos, 0.04);
-      this.currentCamLook.lerp(targetLookAt, 0.04);
+      this.currentCamPos.lerp(targetCamPos, 0.035);
+      this.currentCamLook.lerp(targetLookAt, 0.035);
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
@@ -676,7 +684,7 @@ class ConvoyManager {
 
       // A. Gelin Arabası ile Takip Mesafesi (Lead Car at Z=6.0)
       if (this.leadCar && Math.abs(currentX - this.leadCar.position.x) < 2.5) {
-        const MIN_LEAD_DIST = 14.0; // Gelin arabasının arkasında en az 14m ferah mesafe
+        const MIN_LEAD_DIST = 26.0; // Gelin arabasının arkasında 26m devasa ferah mesafe
         if (effectiveTargetZ > this.leadCar.position.z - MIN_LEAD_DIST) {
           effectiveTargetZ = this.leadCar.position.z - MIN_LEAD_DIST;
         }
@@ -689,22 +697,22 @@ class ConvoyManager {
         const latDist = Math.abs(currentX - giftX);
 
         if (latDist < 3.2) {
-          // Aynı veya bitişik şeritte ise: arkasındaki araçlar en az 18m geriye çekilir, önündekiler 14m açılır!
+          // Aynı veya bitişik şeritte ise: arkasındaki araçlar en az 26m geriye çekilir, önündekiler 20m açılır!
           if (currentZ <= giftZ) {
-            const GIFT_REAR_DIST = 18.0;
+            const GIFT_REAR_DIST = 26.0;
             if (effectiveTargetZ > giftZ - GIFT_REAR_DIST) {
               effectiveTargetZ = giftZ - GIFT_REAR_DIST;
             }
           } else {
-            const GIFT_FRONT_DIST = 14.0;
+            const GIFT_FRONT_DIST = 20.0;
             if (effectiveTargetZ < giftZ + GIFT_FRONT_DIST) {
               effectiveTargetZ = giftZ + GIFT_FRONT_DIST;
             }
           }
-        } else if (Math.abs(currentZ - giftZ) < 8.0) {
+        } else if (Math.abs(currentZ - giftZ) < 12.0) {
           // Yanındaki şeritlerdeki araçlar dışa açılarak sahneyi hediye aracına bırakır
           const pushX = currentX >= giftX ? 1.0 : -1.0;
-          effectiveTargetX = THREE.MathUtils.clamp(effectiveTargetX + pushX * 0.8, -4.2, 4.2);
+          effectiveTargetX = THREE.MathUtils.clamp(effectiveTargetX + pushX * 0.9, -4.2, 4.2);
         }
       }
 
@@ -722,8 +730,8 @@ class ConvoyManager {
 
           // Eğer cObj arkada kalması gereken bir araçsa frenleme ve takip mesafesi uygula
           if (cObj.targetPos.z <= other.targetPos.z) {
-            if (lateralDist < 2.4) {
-              const SAFE_FOLLOW_DIST = 12.0; // Minimum 12m güvenli tampon mesafesi
+            if (lateralDist < 2.5) {
+              const SAFE_FOLLOW_DIST = 18.0; // Minimum 18m güvenli tampon mesafesi
               if (effectiveTargetZ > otherZ - SAFE_FOLLOW_DIST) {
                 effectiveTargetZ = otherZ - SAFE_FOLLOW_DIST;
               }
@@ -733,18 +741,18 @@ class ConvoyManager {
             }
           } else {
             // cObj daha yüksek puana sahip ve öne geçiyor (Overtake): Aynı şerittelerse yana açıl
-            if (lateralDist < 2.2 && forwardDist < 8.0) {
+            if (lateralDist < 2.4 && forwardDist < 10.0) {
               const passDir = currentX >= 0 ? 1 : -1;
-              cObj.group.position.x += passDir * 0.04;
+              cObj.group.position.x += passDir * 0.05;
             }
           }
         } else {
           // Yan yana geçerken iç içe girmeyi önleyen yanal itme kuvveti
           const forwardDist = Math.abs(otherZ - currentZ);
           const lateralDist = Math.abs(currentX - otherX);
-          if (forwardDist < 5.5 && lateralDist < 2.2) {
+          if (forwardDist < 7.0 && lateralDist < 2.4) {
             const pushDir = currentX >= otherX ? 1 : -1;
-            cObj.group.position.x += pushDir * 0.04;
+            cObj.group.position.x += pushDir * 0.05;
           }
         }
       });
@@ -868,21 +876,36 @@ class ConvoyManager {
       this.leadCar.rotation.x = Math.sin(leadTime * 0.75) * 0.003;
     }
 
-    // 2. KESİN VE SERT ÇARPIŞMA / İÇ İÇE GİRME ENGELLEYİCİ (Hard Non-Penetration Clamp)
-    // Fiziksel sınır: İki aracın gövdesi hiçbir zaman iç içe giremez!
-    const activeVehicles = carsList.filter(c => !c.isDrifting && !c.isBurnout);
-    activeVehicles.sort((a, b) => b.group.position.z - a.group.position.z);
+    // 2. KESİN VE SERT ÇARPIŞMA / İÇ İÇE GİRME ENGELLEYİCİ (2D Bounding Box Mutual Separation)
+    // Fiziksel sınır: İki aracın gövdesi ve sürücüsü hiçbir şart altında iç içe giremez!
+    for (let i = 0; i < carsList.length; i++) {
+      const vA = carsList[i];
+      for (let j = i + 1; j < carsList.length; j++) {
+        const vB = carsList[j];
 
-    for (let i = 0; i < activeVehicles.length; i++) {
-      const front = activeVehicles[i];
-      for (let j = i + 1; j < activeVehicles.length; j++) {
-        const rear = activeVehicles[j];
-        const latDist = Math.abs(front.group.position.x - rear.group.position.x);
-        if (latDist < 2.2) {
-          const minGap = (front.isMotor && rear.isMotor) ? 6.5 : 9.5;
-          if (rear.group.position.z > front.group.position.z - minGap) {
-            rear.group.position.z = front.group.position.z - minGap;
+        const dx = vB.group.position.x - vA.group.position.x;
+        const dz = vB.group.position.z - vA.group.position.z;
+        const absX = Math.abs(dx);
+        const absZ = Math.abs(dz);
+
+        const minZDist = (vA.isMotor && vB.isMotor) ? 9.5 : 14.5;
+        const minXDist = 2.45;
+
+        if (absX < minXDist && absZ < minZDist) {
+          // İki araç tehlikeli temas sınırında: hem Z hem X ekseninde anında sertçe it!
+          const overlapZ = minZDist - absZ;
+          if (dz >= 0) {
+            vA.group.position.z -= overlapZ * 0.6;
+            vB.group.position.z += overlapZ * 0.4;
+          } else {
+            vB.group.position.z -= overlapZ * 0.6;
+            vA.group.position.z += overlapZ * 0.4;
           }
+
+          const overlapX = minXDist - absX;
+          const pushDir = dx >= 0 ? 1 : -1;
+          vB.group.position.x += pushDir * overlapX * 0.5;
+          vA.group.position.x -= pushDir * overlapX * 0.5;
         }
       }
     }
@@ -969,8 +992,8 @@ class ConvoyManager {
         return;
       }
 
-      // Aracın tam tavanı üstünde sabit hizalanmış pozisyon (Araba: 1.30m, Motor: 1.55m)
-      const labelHeight = cObj.isMotor ? 1.55 : 1.30;
+      // Aracın tam tavanı üstünde sabit hizalanmış pozisyon (Araba: 1.45m, Motor: 1.70m)
+      const labelHeight = cObj.isMotor ? 1.70 : 1.45;
       tempV.set(carPos.x, carPos.y + labelHeight, carPos.z);
       tempV.project(camera);
 
@@ -981,9 +1004,9 @@ class ConvoyManager {
         const sx = (tempV.x * 0.5 + 0.5) * w;
         const sy = (-tempV.y * 0.5 + 0.5) * h;
         const dist = camera.position.distanceTo(carPos);
-        // Aşırı büyümeyi engelleyen kompakt ölçek (0.40 - 0.70 arası)
-        const scale = Math.max(0.40, Math.min(0.70, 26 / dist));
-        const opacity = dist > 90 ? Math.max(0, 1 - (dist - 90) / 45) : 1;
+        // Geniş sinematik kameradan kristal netlikte okunan, yarı yarıya büyütülmüş ölçek
+        const scale = Math.max(0.65, Math.min(1.10, 42 / dist));
+        const opacity = dist > 140 ? Math.max(0, 1 - (dist - 140) / 50) : 1;
         cObj.labelEl.style.opacity = opacity.toFixed(2);
         cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(2)})`;
       }

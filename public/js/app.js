@@ -518,7 +518,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 3. Özel Motor Çıkışı
       case 'EVENT_MOTOR_SPAWN':
-        convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
+        }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-motor', 5000, payload.giftIcon || 'images/gifts/rosa.webp');
         addLog(payload.message, 'log-motor');
@@ -548,7 +552,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Hediye ile Araba Yükseltme -> Kamerayı Odakla, Mesafeyi Aç!
       case 'EVENT_CAR_UPGRADE':
-        convoy.spawnOrUpdateCar(payload.user);
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
+        }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-upgrade', 4500);
         if (audio) audio.playUpgradeFanfare();

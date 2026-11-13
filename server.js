@@ -563,8 +563,7 @@ function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
 
   switchToMotor(user);
   upgradeUserVehicle(user, 'Özel Motor', 20);
-  user.points += 25;
-  saveState();
+  addPointsToConvoyUser(user, 25, 'Özel Motor Çıkışı');
 
   const sorted = getSortedConvoy();
   const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
@@ -572,6 +571,7 @@ function handleMotorcycleUpgrade(uniqueId, nickname, avatar) {
   broadcast('EVENT_MOTOR_SPAWN', {
     user,
     rankIdx,
+    sortedConvoy: sorted,
     message: `🏍️💨 ${user.nickname} ÖZEL 3D MOTOSİKLETİ VE SÜRÜCÜSÜYLE KONVOYA ÇIKTI!`
   });
 }
@@ -673,10 +673,12 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   if (isUpgradeAction) {
     upgradeUserVehicle(user, `${repeatCount >= 20 ? repeatCount + 'x Gül' : giftName}`, diamondCount || 20);
     addPointsToConvoyUser(user, 60 * Math.max(1, Math.floor((diamondCount || repeatCount) / 20)), 'Araba Yükseltme');
-    const sortedRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
+    const sorted = getSortedConvoy();
+    const sortedRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
     broadcast('EVENT_CAR_UPGRADE', {
       user,
       rankIdx: Math.max(0, sortedRank),
+      sortedConvoy: sorted,
       giftIcon: 'images/gifts/rose.webp',
       message: `🚀✨ ${user.nickname} 20x ROSE (20🪙) İLE ARABASINI YÜKSELTTİ! YENİ ARAÇ: ${user.carName}!`
     });
@@ -705,10 +707,12 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   if (gName.includes('gg') || gName.includes('motor')) {
     switchToMotor(user);
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
-    const ggRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
+    const sorted = getSortedConvoy();
+    const ggRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
     broadcast('EVENT_MOTOR_SPAWN', {
       user,
       rankIdx: Math.max(0, ggRank),
+      sortedConvoy: sorted,
       giftIcon: 'images/gifts/gg.webp',
       message: `🏍️💨 ${user.nickname} GG (1🪙) İLE ÖZEL MOTORUYLA KONVOYA FIRLADI!`
     });
