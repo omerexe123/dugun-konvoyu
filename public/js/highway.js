@@ -93,23 +93,28 @@ class HighwayEngine {
           ? ch.material.map(m => m.name || '').join(' ').toLowerCase()
           : (ch.material?.name || '').toLowerCase();
 
-        // 1. Arabalara ve kameraya çarpan alçak direkleri, otobüs duraklarını, reklam panolarını ve tabela engellerini kesinlikle gizle:
-        const isClutter = /circle|trafic|signal|cube|smallasset|plane\.00[1-9]|kiosk|shelter|billboard|gltf_scenerootnode\.00[2-4]/i.test(name)
-          || /(material\.008|trafic|material\.019|material\.021|material\.022)/i.test(matNames);
+        // 1. Yol, kaldırım ve yol çizgilerini KESİNLİKLE KORU (Asla gizlenemez, mavi ekran oluşmasını %100 engeller)
+        const isRoadOrGround = matNames.includes('material.007') || matNames.includes('material.011') || matNames.includes('material.009') || name.includes('road') || name.includes('street');
+
+        // 2. Yalnızca yola taşan tabela, otobüs durağı reklam panosu ve alçak trafik direklerini gizle:
+        const isClutter = !isRoadOrGround && (
+          matNames.includes('material.008') ||
+          matNames.includes('trafic') ||
+          matNames.includes('material.019') ||
+          matNames.includes('material.021') ||
+          matNames.includes('material.022') ||
+          /smallasset|circle\.|kiosk|shelter|billboard/i.test(name) ||
+          /cube\.(001|048)/i.test(name) ||
+          /plane\.00[68]/i.test(name)
+        );
 
         if (isClutter) {
           ch.visible = false;
-          ch.layers.disableAll ? ch.layers.disableAll() : null;
           return;
         }
 
         if (ch.isMesh) {
           ch.castShadow = false;
-
-          // Performans & Z-Fighting Kilidi:
-          // Sadece yol, kaldırım ve yol çizgilerini kesintisiz tut (asla kaybolmaz);
-          // Binalar ve çatılar kamera arkasında GPU'ya boşuna render yükü bindirmesin (Frustum Culling):
-          const isRoadOrGround = matNames.includes('material.007') || matNames.includes('material.011') || matNames.includes('material.009') || name.includes('road') || name.includes('street');
           ch.frustumCulled = !isRoadOrGround;
           ch.receiveShadow = isRoadOrGround;
 
@@ -574,7 +579,7 @@ class HighwayEngine {
     const loopLen = this.cityLoopLength || 124.4835;
     const numBlocks = this.cityBlocks.length || 6;
     const wrapDistance = loopLen * numBlocks;
-    const minZ = -loopLen * 4.0;
+    const minZ = -loopLen * 4.5;
 
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;

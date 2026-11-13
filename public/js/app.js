@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_CONVOY_JOIN':
-        convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || Object.keys(convoy.convoyCars).length);
+        convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? Object.keys(convoy.convoyCars).length);
         if (payload.isNew) {
           convoy.showBanner(payload.message, 'banner-join', 3500);
         }
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
           payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
         } else {
-          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-motor', 5000, payload.giftIcon || 'images/gifts/rosa.webp');
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             leaderEl.textContent = payload.sortedConvoy[0].nickname;
           }
         } else {
-          convoy.spawnOrUpdateCar(payload.user || { uniqueId: payload.uniqueId, points: payload.newTotal, tier: payload.newTier, carName: payload.carName }, payload.rankIdx || 0);
+          convoy.spawnOrUpdateCar(payload.user || { uniqueId: payload.uniqueId, points: payload.newTotal, tier: payload.newTier, carName: payload.carName }, payload.rankIdx ?? 0);
         }
         break;
 
@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
           payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
         } else {
-          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx || 0);
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.showBanner(payload.message, 'banner-upgrade', 4500);
