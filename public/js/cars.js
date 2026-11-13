@@ -181,13 +181,13 @@ const CarFactory = {
   },
 
   // Kernel Seviyesinde Model Bütünlüğünü Koruyan Evrensel Tekerlek Motoru
-  // Tüm araba ve motosikletlerin (VW, Mercedes, BMW, Ninja, Yamaha, Pulsar vb.)
+  // Tüm araba ve motosikletlerin (VW, Mercedes C220, BMW, Honda vb.)
   // tekerleklerini kendi aks merkezinde kusursuz döndürür, tavana fırlamayı %100 engeller.
   setupVehicleWheels(container, isMotor = false) {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|inmx7m60i_wheel.*|m_m_tire.*|wheel_rf_dummy.*|Front Wheel.*|Rear Wheel.*|polo17wheel.*|tire_01a_.*|wheel_front$|wheel_rear$)$/i;
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|w206_wheel.*|inmx7m60i_wheel.*|m_m_tire.*|wheel_rf_dummy.*|polo17wheel.*|tire_01a_.*)$/i;
     const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl/i;
 
     const candidates = [];
@@ -206,7 +206,7 @@ const CarFactory = {
         return;
       }
 
-      // 2. Malzeme bazlı (Yamaha, BMW M5 vb. OBJ modeller)
+      // 2. Malzeme bazlı (Yamaha, BMW M5 vb. modeller)
       if (ch.isMesh && ch.material) {
         const mat = ch.material;
         const matName = (Array.isArray(mat) ? mat.map(m => m.name).join(' ') : (mat.name || '')).toLowerCase();
@@ -226,32 +226,48 @@ const CarFactory = {
       return true;
     });
 
-    // Geometri merkezleme ve pivot sabitleme
     filtered.forEach(cand => {
-      if (cand.isMesh && cand.geometry) {
-        try {
-          cand.geometry.computeBoundingBox();
-          const bbox = cand.geometry.boundingBox;
-          if (bbox) {
-            const center = new THREE.Vector3();
-            bbox.getCenter(center);
-            const size = new THREE.Vector3();
-            bbox.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z);
-
-            // Tek bir tekerlek meşi ise (tüm gövdeyi kapsamıyorsa) ve pivotu kaçıksa merkeze çek:
-            if (maxDim < 1.35 && center.length() > 0.04) {
-              cand.geometry.center();
-              cand.position.add(center);
-            }
-          }
-        } catch (e) {}
-      }
-
       wheels.push(cand);
     });
 
     return wheels;
+  },
+
+  // 4 Adet Kusursuz Spor Alaşım Jant ve Lastik Fabrikası (Honda S2000 vb. modeller için)
+  createSportsWheel() {
+    const w = new THREE.Group();
+
+    // 1. Kauçuk Dış Lastik (0.64m dış çap, 0.22m taban)
+    const tireGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 24);
+    tireGeo.rotateZ(Math.PI / 2);
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.82, metalness: 0.1 });
+    const tire = new THREE.Mesh(tireGeo, tireMat);
+    w.add(tire);
+
+    // 2. Parlak Titanyum Alaşım Jant Çemberi
+    const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.23, 20);
+    rimGeo.rotateZ(Math.PI / 2);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.20, metalness: 0.85 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    w.add(rim);
+
+    // 3. 5 Kollu V-Spoke Spor Jant Kolları
+    for (let i = 0; i < 5; i++) {
+      const spokeGeo = new THREE.BoxGeometry(0.038, 0.38, 0.04);
+      const spoke = new THREE.Mesh(spokeGeo, rimMat);
+      spoke.rotation.x = (i * Math.PI) / 2.5;
+      w.add(spoke);
+    }
+
+    // 4. Havalandırmalı Fren Diski
+    const discGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.02, 16);
+    discGeo.rotateZ(Math.PI / 2);
+    const discMat = new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.35, metalness: 0.8 });
+    const disc = new THREE.Mesh(discGeo, discMat);
+    w.add(disc);
+
+    w.userData.spinAxis = 'x';
+    return w;
   },
 
   // ===========================================================
@@ -366,7 +382,35 @@ const CarFactory = {
         }
       });
       group.add(carMesh);
-      group.userData.wheels = this.setupVehicleWheels(carMesh, false);
+
+      // Honda S2000 Özel Durumu: Yekpare SketchUp statik jant/lastiklerini gizle, 4 adet dönen spor alaşım jant tak:
+      if (safeTier === 6) {
+        carMesh.traverse(ch => {
+          if (ch.isMesh && ch.material) {
+            const matName = (Array.isArray(ch.material) ? ch.material.map(m => m.name).join(' ') : (ch.material.name || '')).toLowerCase();
+            if (matName.includes('silver') || matName.includes('charcoal') || matName.includes('snow') || matName.includes('edge_color169') || matName.includes('edge_color192') || matName.includes('brembo')) {
+              ch.visible = false;
+            }
+          }
+        });
+
+        const s2000Wheels = [];
+        const offsets = [
+          [-0.78, 0.33, 1.25],
+          [0.78, 0.33, 1.25],
+          [-0.78, 0.33, -1.25],
+          [0.78, 0.33, -1.25]
+        ];
+        offsets.forEach(([x, y, z]) => {
+          const w = this.createSportsWheel();
+          w.position.set(x, y, z);
+          group.add(w);
+          s2000Wheels.push(w);
+        });
+        group.userData.wheels = s2000Wheels;
+      } else {
+        group.userData.wheels = this.setupVehicleWheels(carMesh, false);
+      }
     } else {
       // Yüklenene kadar geçici renkli gövde
       const color = customColorHex || 0x2563eb;
@@ -723,21 +767,38 @@ const CarFactory = {
   // ===========================================================
   attachUnderglow(group, options = {}) {
     const isMotor = options.isMotor || false;
-    const width = isMotor ? 0.65 : 1.85;
-    const length = isMotor ? 1.70 : 3.60;
-    const sideX = isMotor ? 0.22 : 0.82;
+    const width = isMotor ? 0.60 : 1.85;
+    const length = isMotor ? 1.30 : 3.50;
+    const sideX = 0.82;
     const yGround = 0.035;
 
     const neonContainer = new THREE.Group();
 
-    // 1. Asfalta Yayılan Geniş Neon Parıltı Havuzu (Zemine paralel)
+    // Gerçekçi yumuşak neon ışık dokusu (Soft Radial Glow Canvas Texture)
+    if (!CarFactory.neonTexture && typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.65)');
+      grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.18)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+      CarFactory.neonTexture = new THREE.CanvasTexture(canvas);
+    }
+
+    // 1. Asfalta Yayılan Difüze Yumuşak Neon Parıltısı (Zemine paralel)
     const poolGeom = new THREE.PlaneGeometry(width, length);
     poolGeom.rotateX(-Math.PI / 2);
 
     const poolMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
+      map: CarFactory.neonTexture || null,
       transparent: true,
-      opacity: 0.75,
+      opacity: isMotor ? 0.60 : 0.82,
       depthWrite: false,
       blending: THREE.AdditiveBlending
     });
@@ -745,20 +806,23 @@ const CarFactory = {
     poolMesh.position.y = yGround;
     neonContainer.add(poolMesh);
 
-    // 2. Marşpiyel Altı Parlak Neon Tüpleri (Sağ ve Sol)
-    const tubeGeom = new THREE.BoxGeometry(0.05, 0.04, length * 0.82);
-    const tubeMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending
-    });
+    // 2. Marşpiyel Altı Parlak Neon Tüpleri (Sadece ARABALAR İÇİNDİR, Motosiklette marşpiyel olmaz!)
+    let tubeMat = null;
+    if (!isMotor) {
+      const tubeGeom = new THREE.BoxGeometry(0.04, 0.03, length * 0.75);
+      tubeMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.90,
+        blending: THREE.AdditiveBlending
+      });
 
-    [-sideX, sideX].forEach(sx => {
-      const tube = new THREE.Mesh(tubeGeom, tubeMat);
-      tube.position.set(sx, yGround + 0.08, 0);
-      neonContainer.add(tube);
-    });
+      [-sideX, sideX].forEach(sx => {
+        const tube = new THREE.Mesh(tubeGeom, tubeMat);
+        tube.position.set(sx, yGround + 0.08, 0);
+        neonContainer.add(tube);
+      });
+    }
 
     neonContainer.visible = false;
     group.add(neonContainer);
@@ -772,7 +836,7 @@ const CarFactory = {
       setColor(hex) {
         this.color = typeof hex === 'string' ? parseInt(hex.replace('#', '0x'), 16) : hex;
         poolMat.color.setHex(this.color);
-        tubeMat.color.setHex(this.color);
+        if (tubeMat) tubeMat.color.setHex(this.color);
       },
       setEnabled(flag) {
         this.enabled = !!flag;

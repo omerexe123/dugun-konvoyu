@@ -39,16 +39,16 @@ class HighwayEngine {
   // 1. Sonsuz Şehir Zemin Tabanı (Derin Asfalt Altlığı)
   // -------------------------------------------------------------
   initRoad() {
-    // Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı (ufuk boşluğunu engeller)
+    // Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı (ufuk boşluğunu ve delikleri engeller)
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x141820,
-      roughness: 0.9,
+      color: 0x1f2937,
+      roughness: 0.92,
       metalness: 0.05
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.08;
+    groundMesh.position.y = -0.01;
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
   }

@@ -575,14 +575,14 @@ class ConvoyManager {
 
     // Otomatik Yönetmen Modu (cameraMode === 0)
     if (this.cameraMode === 0) {
-      // Hediye Yoksa Boşta Sinematik Gezinme (Gelin Arabası & Konvoy Süzülüşü)
+      // Hediye Yoksa Boşta Sinematik Gezinme (Bina duvarlarına çarpmayan güvenli bulvar koridoru)
       this.idleTimer += dt;
       const orbitAngle = this.idleTimer * 0.22;
       const orbitRadius = 14.0 + Math.sin(this.idleTimer * 0.15) * 3.0;
-      const camY = 5.5 + Math.sin(this.idleTimer * 0.2) * 2.0;
+      const camY = 5.2 + Math.sin(this.idleTimer * 0.2) * 1.6;
 
       const targetCamPos = new THREE.Vector3(
-        Math.sin(orbitAngle) * 5.5,
+        Math.sin(orbitAngle) * 3.6,
         camY,
         leadZ + orbitRadius
       );
@@ -891,7 +891,7 @@ class ConvoyManager {
     const baseWheelSpeed = ((window.highwayEngine ? window.highwayEngine.scrollSpeed : 38.0) / 0.33);
     if (this.leadCar && this.leadCar.userData.wheels) {
       this.leadCar.userData.wheels.forEach(w => {
-        w.rotation.x += baseWheelSpeed * dt;
+        w.rotateX(baseWheelSpeed * dt);
       });
     }
 
@@ -906,7 +906,7 @@ class ConvoyManager {
       if (carWheels && carWheels.length > 0) {
         const mult = cObj.isBurnout ? 4.2 : (cObj.isDrifting ? 2.0 : 1.0);
         carWheels.forEach(w => {
-          w.rotation.x += baseWheelSpeed * mult * dt;
+          w.rotateX(baseWheelSpeed * mult * dt);
         });
       }
     });

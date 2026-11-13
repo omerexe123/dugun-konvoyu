@@ -662,32 +662,46 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   gameState.stats.totalGifts += repeatCount;
   const gName = (giftName || '').toLowerCase();
 
-  // KULLANICI HEDİYE ATTI: Arabasını hemen hediye ile yükselt!
-  upgradeUserVehicle(user, giftName, diamondCount);
-
   // Gelin vs Damat Savaş Puanı & Toplu Düğün Hedefi
   const isBrideSide = gName.includes('perfume') || gName.includes('parfüm') || gName.includes('swan') || gName.includes('kuğu') || gName.includes('rose') || gName.includes('gül') || gName.includes('kalp');
   updateBattleAndMilestone(isBrideSide ? 'bride' : 'groom', (diamondCount || 1) * 3 * repeatCount, repeatCount);
 
-  // 1. KURAL: PERFUME (Parfüm) -> GELİN OLMA
+  // 1. KURAL: 20x ROSE VEYA 20+ COIN HEDİYE -> ARABA YÜKSELTME (TikTok Rose 20x = 20 coin)
+  const isRoseGift = gName.includes('rose') || gName.includes('gül');
+  const isUpgradeAction = gName.includes('upgrade') || gName.includes('yükselt') || (isRoseGift && (repeatCount >= 20 || diamondCount >= 20));
+
+  if (isUpgradeAction) {
+    upgradeUserVehicle(user, `${repeatCount >= 20 ? repeatCount + 'x Gül' : giftName}`, diamondCount || 20);
+    addPointsToConvoyUser(user, 60 * Math.max(1, Math.floor((diamondCount || repeatCount) / 20)), 'Araba Yükseltme');
+    const sortedRank = getSortedConvoy().findIndex(u => u.uniqueId === user.uniqueId);
+    broadcast('EVENT_CAR_UPGRADE', {
+      user,
+      rankIdx: Math.max(0, sortedRank),
+      giftIcon: 'images/gifts/rose.webp',
+      message: `🚀✨ ${user.nickname} 20x ROSE (20🪙) İLE ARABASINI YÜKSELTTİ! YENİ ARAÇ: ${user.carName}!`
+    });
+    return;
+  }
+
+  // 2. KURAL: PERFUME (Parfüm) -> GELİN OLMA
   if (gName.includes('perfume') || gName.includes('parfüm') || gName.includes('parfum') || gName.includes('swan') || gName.includes('kuğu')) {
     handleBecomeBride(uniqueId, nickname, avatar, `${giftName} (${diamondCount || 20}🪙)`);
     return;
   }
 
-  // 2. KURAL: HAT AND MUSTACHE (Şapka ve Bıyık) -> DAMAT OLMA
+  // 3. KURAL: HAT AND MUSTACHE (Şapka ve Bıyık) -> DAMAT OLMA
   if (gName.includes('mustache') || gName.includes('bıyık') || gName.includes('hat and') || gName.includes('şapka') || gName.includes('lion') || gName.includes('aslan')) {
     handleBecomeGroom(uniqueId, nickname, avatar, `${giftName} (${diamondCount || 99}🪙)`);
     return;
   }
 
-  // 3. KURAL: TIKTOK (1🪙) -> ŞASİ ALTI NEON IŞIK TAKMA
+  // 4. KURAL: TIKTOK (1🪙) -> ŞASİ ALTI NEON IŞIK TAKMA
   if (gName.includes('tiktok') || gName.includes('sunglasses') || gName.includes('gözlük') || gName.includes('neon')) {
     handleEquipNeon(uniqueId, nickname, avatar);
     return;
   }
 
-  // 4. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
+  // 5. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
   if (gName.includes('gg') || gName.includes('motor')) {
     switchToMotor(user);
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
@@ -701,7 +715,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 5. KURAL: CAKE SLICE (Pasta Dilimi - 1🪙) -> LASTİK YAKMA & BURNOUT
+  // 6. KURAL: CAKE SLICE (Pasta Dilimi - 1🪙) -> LASTİK YAKMA & BURNOUT
   if (gName.includes('cake') || gName.includes('pasta') || gName.includes('slice') || gName.includes('fire') || gName.includes('ateş')) {
     gameState.stats.totalBurnouts = (gameState.stats.totalBurnouts || 0) + 1;
     addPointsToConvoyUser(user, 25 * repeatCount, 'Pasta Dilimi Burnout');
@@ -713,7 +727,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 6. KURAL: ICE CREAM CONE (Dondurma - 1🪙) -> MOTORSA TEK TEKER, ARABAYSA DRİFT!
+  // 7. KURAL: ICE CREAM CONE (Dondurma - 1🪙) -> MOTORSA TEK TEKER, ARABAYSA DRİFT!
   if (gName.includes('ice cream') || gName.includes('dondurma') || gName.includes('cone') || gName.includes('külah')) {
     if (user.vehicleType === 'motor') {
       gameState.stats.totalWheelies = (gameState.stats.totalWheelies || 0) + 1;
@@ -736,7 +750,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 7. KURAL: ROSE (GÜL - 1🪙) VE DİĞER TÜM 1 COINLİK HEDİYELER -> UZUN VE EFSANE DRİFT!
+  // 8. KURAL: 1x ROSE (GÜL - 1🪙) VE DİĞER TÜM 1 COINLİK HEDİYELER -> UZUN VE EFSANE DRİFT!
   gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
   addPointsToConvoyUser(user, 15 * repeatCount, `${giftName} Drifti`);
   broadcast('EVENT_DRIFT', {
@@ -845,6 +859,9 @@ app.post('/api/simulate', (req, res) => {
     case 'drift':
     case 'rose':
       handleGiftEvent(uId, nick, avatar, 'Gül', 1, 1);
+      break;
+    case 'upgrade':
+      handleGiftEvent(uId, nick, avatar, '20x Rose (Araba Yükselt)', 20, 20);
       break;
     case 'motor':
       handleMotorcycleUpgrade(uId, nick, avatar);

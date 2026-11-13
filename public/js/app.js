@@ -911,6 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'drift':
         case 'rose':
           simulate({ type: 'drift', uniqueId: u, nickname: u }); break;
+        case 'upgrade':
+          simulate({ type: 'upgrade', uniqueId: u, nickname: u }); break;
         case 'motor':
           simulate({ type: 'motor', uniqueId: u, nickname: u }); break;
         case 'wheelie':
