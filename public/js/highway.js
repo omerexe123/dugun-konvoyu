@@ -183,15 +183,23 @@ class HighwayEngine {
   initTreeModels() {
     this.treeTemplates = [];
     if (typeof THREE.GLTFLoader === 'undefined') return;
-    const loader = new THREE.GLTFLoader();
 
+    if (HighwayEngine.cachedTrees && HighwayEngine.cachedTrees.length === 2) {
+      this.treeTemplates = HighwayEngine.cachedTrees;
+      this.populateTrees();
+      return;
+    }
+
+    const loader = new THREE.GLTFLoader();
     ['models/tree_large.glb', 'models/tree_small.glb'].forEach((path, idx) => {
       loader.load(path, gltf => {
         const treeScene = gltf.scene;
+        // 60 FPS: Ağaç gölge haritası hesaplamalarını kapatarak performansı koru
         treeScene.traverse(ch => {
           if (ch.isMesh) {
-            ch.castShadow = true;
-            ch.receiveShadow = true;
+            ch.castShadow = false;
+            ch.receiveShadow = false;
+            ch.frustumCulled = true;
             if (ch.material) {
               ch.material.roughness = 0.85;
             }
@@ -206,6 +214,7 @@ class HighwayEngine {
 
         this.treeTemplates.push(treeScene);
         if (this.treeTemplates.length === 2) {
+          HighwayEngine.cachedTrees = this.treeTemplates;
           this.populateTrees();
         }
       }, undefined, err => {
@@ -218,7 +227,7 @@ class HighwayEngine {
     if (!this.treeTemplates || this.treeTemplates.length === 0) return;
     this.roadSegments.forEach(seg => {
       [-1, 1].forEach(side => {
-        for (let tz = -70; tz <= 70; tz += 16) {
+        for (let tz = -70; tz <= 70; tz += 18) {
           const tmpl = this.treeTemplates[Math.abs(tz) % 2];
           if (!tmpl) continue;
           const tree = tmpl.clone(true);
@@ -233,10 +242,9 @@ class HighwayEngine {
   createStreetLamp(dirX) {
     const lamp = new THREE.Group();
 
-    // Dikey Direk
+    // Dikey Direk (60 FPS için hafif gölgesiz metal)
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 5.2, 6), this.materials.lampPole);
     pole.position.y = 2.6;
-    pole.castShadow = true;
     lamp.add(pole);
 
     // Yola doğru uzanan yatay eğik kol
@@ -253,231 +261,82 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 2. Anında (0ms) Yüklenen Şehir ve 3D city.glb Entegrasyonu
+  // 2. 3D Şehir Modeli (city.glb) - Kusursuz Birebir Entegrasyon & Sıfır Takılma
   // -------------------------------------------------------------
   initCityModel() {
-    // 1. Önce ANINDA (0 milisaniye) çalışan modern prosedürel şehir bloklarını inşa et
-    this.initInstantProceduralCity();
-
     if (typeof THREE.GLTFLoader === 'undefined') return;
+
+    // Önbellekte varsa tekrar GLTF parse edip sayfayı dondurma!
+    if (HighwayEngine.cachedCity) {
+      this.setupCityBlocks(HighwayEngine.cachedCity);
+      return;
+    }
+
+    if (HighwayEngine.isLoadingCity) return;
+    HighwayEngine.isLoadingCity = true;
 
     const loader = new THREE.GLTFLoader();
     loader.load('models/city.glb', gltf => {
+      HighwayEngine.isLoadingCity = false;
       const baseScene = gltf.scene;
 
-      // Orijinal dokuları ve PBR materyalleri koru!
+      // 60 FPS KİLİT: Şehir binaları gölge haritasını boğmasın, orijinal dokuları korunsun
       baseScene.traverse(ch => {
         if (ch.isMesh) {
-          ch.castShadow = true;
-          ch.receiveShadow = true;
+          ch.castShadow = false;
+          ch.receiveShadow = false;
           ch.frustumCulled = true;
           if (ch.material) {
-            ch.material.roughness = 0.70;
+            ch.material.roughness = 0.65;
             ch.material.metalness = 0.15;
           }
         }
       });
 
-      // Bounding box hesapla
-      const box = new THREE.Box3().setFromObject(baseScene);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-
-      // Ölçekleme (Bulvar kenarında heybetli gökdelen blokları)
-      const targetBlockLength = 65.0; // 65 metrelik blok
-      const s = targetBlockLength / (size.z || 1);
-
-      // Peş peşe dizilecek 6 optimize şehir bloğu (3 Sol, 3 Sağ - Kaldırım kenarı x = ±26m)
-      const blockPositions = [
-        // Sol Taraf (x = -26.0)
-        { x: -26.0, z: -65.0, rotY: 0 },
-        { x: -26.0, z: 0.0, rotY: 0 },
-        { x: -26.0, z: 65.0, rotY: 0 },
-        // Sağ Taraf (x = 26.0)
-        { x: 26.0, z: -65.0, rotY: Math.PI },
-        { x: 26.0, z: 0.0, rotY: Math.PI },
-        { x: 26.0, z: 65.0, rotY: Math.PI }
-      ];
-
-      // Prosedürel geçici binaları sahneden kaldır
-      if (this.proceduralBlocks && this.proceduralBlocks.length > 0) {
-        this.proceduralBlocks.forEach(b => this.scene.remove(b));
-        this.cityBlocks = [];
-      }
-
-      blockPositions.forEach(cfg => {
-        const clone = baseScene.clone(true);
-        clone.scale.set(s, s, s);
-
-        const b = new THREE.Box3().setFromObject(clone);
-        clone.position.x = cfg.x;
-        clone.position.y = -b.min.y;
-        clone.position.z = cfg.z;
-        clone.rotation.y = cfg.rotY;
-
-        this.scene.add(clone);
-        this.cityBlocks.push(clone);
-      });
-
-      console.log(`[HighwayEngine] 3D Şehir Modeli (city.glb) bulvar kenarına (6 blok, 195m) yerleştirildi!`);
+      HighwayEngine.cachedCity = baseScene;
+      this.setupCityBlocks(baseScene);
+      console.log('[HighwayEngine] 3D city.glb başarıyla caddeye yerleştirildi!');
     }, undefined, err => {
-      console.warn('[HighwayEngine] city.glb arka plan yükleme uyarısı (Prosedürel şehir devrede):', err.message);
+      HighwayEngine.isLoadingCity = false;
+      console.warn('[HighwayEngine] city.glb yükleme uyarısı:', err.message);
     });
-
-    // 3. Uzak Ufuk Metropol Silueti (360 derece çevreleyen gökdelenler)
-    this.initDistantSkyline();
   }
 
-  // 0 Milisaniye Anında Yüklenen Gece Şehri Silueti
-  initInstantProceduralCity() {
-    this.proceduralBlocks = [];
+  setupCityBlocks(baseScene) {
+    const box = new THREE.Box3().setFromObject(baseScene);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    // Binaları bulvar boyunca kesintisiz diz (cadde kenarı x = ±26m)
+    const targetBlockLength = 70.0;
+    const s = targetBlockLength / (size.z || 1);
 
     const blockConfigs = [
-      { x: -26.0, z: -65.0, rotY: 0 },
-      { x: -26.0, z: 0.0, rotY: 0 },
-      { x: -26.0, z: 65.0, rotY: 0 },
-      { x: 26.0, z: -65.0, rotY: Math.PI },
-      { x: 26.0, z: 0.0, rotY: Math.PI },
-      { x: 26.0, z: 65.0, rotY: Math.PI }
+      // Sol Taraf (x = -26.0)
+      { x: -26.0, z: -35.0, rotY: 0 },
+      { x: -26.0, z: 35.0, rotY: 0 },
+      // Sağ Taraf (x = 26.0)
+      { x: 26.0, z: -35.0, rotY: Math.PI },
+      { x: 26.0, z: 35.0, rotY: Math.PI }
     ];
 
-    const towerColors = [0x1e293b, 0x0f172a, 0x334155, 0x18181b];
-    const windowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
-    const cyanBandMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    // Eski bloklar varsa temizle
+    this.cityBlocks.forEach(b => this.scene.remove(b));
+    this.cityBlocks = [];
 
     blockConfigs.forEach(cfg => {
-      const blockGroup = new THREE.Group();
+      const clone = baseScene.clone(true);
+      clone.scale.set(s, s, s);
 
-      const buildings = [
-        { dx: 0, dz: -14, w: 10, d: 11, h: 32 },
-        { dx: -2, dz: 0, w: 12, d: 12, h: 48 },
-        { dx: 1, dz: 14, w: 11, d: 10, h: 28 }
-      ];
+      const b = new THREE.Box3().setFromObject(clone);
+      clone.position.x = cfg.x;
+      clone.position.y = -b.min.y;
+      clone.position.z = cfg.z;
+      clone.rotation.y = cfg.rotY;
 
-      buildings.forEach((b, bIdx) => {
-        const mat = new THREE.MeshLambertMaterial({ color: towerColors[bIdx % towerColors.length] });
-        const tower = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), mat);
-        tower.position.set(b.dx, b.h / 2, b.dz);
-        blockGroup.add(tower);
-
-        // Işıklı Pencere Şeritleri
-        for (let floor = 4; floor < b.h - 4; floor += 3.5) {
-          const winBand = new THREE.Mesh(
-            new THREE.BoxGeometry(b.w * 0.75, 0.45, 0.1),
-            windowMat
-          );
-          winBand.position.set(b.dx, floor, b.dz + b.d / 2 + 0.06);
-          blockGroup.add(winBand);
-        }
-
-        // Çatı Neon Hattı
-        const neonBorder = new THREE.Mesh(
-          new THREE.BoxGeometry(b.w + 0.1, 0.4, b.d + 0.1),
-          cyanBandMat
-        );
-        neonBorder.position.set(b.dx, b.h + 0.2, b.dz);
-        blockGroup.add(neonBorder);
-
-        // Çatı İletişim Kulesi & Kırmızı Havacılık İkaz Işığı
-        if (b.h > 40) {
-          const spire = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.3, 7.0, 6),
-            this.materials.lampPole
-          );
-          spire.position.set(b.dx, b.h + 3.5, b.dz);
-          blockGroup.add(spire);
-
-          const beacon = new THREE.Mesh(
-            new THREE.SphereGeometry(0.2, 6, 6),
-            new THREE.MeshBasicMaterial({ color: 0xef4444 })
-          );
-          beacon.position.set(b.dx, b.h + 7.1, b.dz);
-          blockGroup.add(beacon);
-        }
-      });
-
-      blockGroup.position.set(cfg.x, 0, cfg.z);
-      blockGroup.rotation.y = cfg.rotY;
-
-      this.scene.add(blockGroup);
-      this.cityBlocks.push(blockGroup);
-      this.proceduralBlocks.push(blockGroup);
+      this.scene.add(clone);
+      this.cityBlocks.push(clone);
     });
-
-    console.log('[HighwayEngine] 0ms Anında Prosedürel Şehir Silueti devrede! Harita bekleme süresi sıfırlandı.');
-  }
-
-  // -------------------------------------------------------------
-  // 2.2 Ufuk Çizgisini Kapatan 360° Kesintisiz Metropol Silueti
-  // -------------------------------------------------------------
-  initDistantSkyline() {
-    this.distantBlocks = [];
-    const distantGroup = new THREE.Group();
-
-    const dTowerColors = [0x0f172a, 0x1e293b, 0x020617, 0x1e1b4b, 0x111827];
-    const dWindowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.75 });
-    const dSpireMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-
-    // 1. Yan Kanatlar (Sol ve Sağ Derinlik Hatları: X = -85, +85)
-    [-85, 85].forEach(sideX => {
-      for (let dz = -260; dz <= 260; dz += 36) {
-        const h = 50 + Math.sin(dz * 0.08) * 25 + (Math.abs(dz) % 18);
-        const w = 18 + (Math.abs(dz) % 8);
-        const d = 16 + (Math.abs(dz) % 6);
-
-        const towerMat = new THREE.MeshLambertMaterial({
-          color: dTowerColors[Math.floor(Math.abs(dz) % dTowerColors.length)]
-        });
-        const tower = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), towerMat);
-        tower.position.set(sideX, h / 2, dz);
-        distantGroup.add(tower);
-
-        for (let fl = 8; fl < h - 8; fl += 6.0) {
-          const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.72, 0.45, d + 0.1), dWindowMat);
-          win.position.set(sideX, fl, dz);
-          distantGroup.add(win);
-        }
-
-        const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.4, 9, 4), dSpireMat);
-        spire.position.set(sideX, h + 4.5, dz);
-        distantGroup.add(spire);
-
-        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 6), beaconMat);
-        beacon.position.set(sideX, h + 9.2, dz);
-        distantGroup.add(beacon);
-      }
-    });
-
-    // 2. Ön ve Arka Ufuk Çizgisi (Kameranın baktığı yönlerde asla boşluk kalmaz)
-    [-270, 270].forEach(endZ => {
-      for (let dx = -140; dx <= 140; dx += 32) {
-        if (Math.abs(dx) < 18) continue; // Yol eksenini çok az açık bırak ama arka planı kapat
-        const h = 55 + Math.cos(dx * 0.1) * 25 + (Math.abs(dx) % 20);
-        const w = 20 + (Math.abs(dx) % 8);
-        const d = 18 + (Math.abs(dx) % 6);
-
-        const towerMat = new THREE.MeshLambertMaterial({
-          color: dTowerColors[Math.floor(Math.abs(dx) % dTowerColors.length)]
-        });
-        const tower = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), towerMat);
-        tower.position.set(dx, h / 2, endZ);
-        distantGroup.add(tower);
-
-        for (let fl = 8; fl < h - 8; fl += 6.5) {
-          const win = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 0.45, d * 0.72), dWindowMat);
-          win.position.set(dx, fl, endZ);
-          distantGroup.add(win);
-        }
-
-        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 6), beaconMat);
-        beacon.position.set(dx, h + 1.0, endZ);
-        distantGroup.add(beacon);
-      }
-    });
-
-    this.scene.add(distantGroup);
-    this.distantBlocks.push(distantGroup);
   }
 
   // -------------------------------------------------------------
@@ -541,13 +400,57 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 4. Drift & Burnout & Kıvılcım Parçacık Sistemi
+  // 4. Drift & Burnout Gerçekçi Volumetrik Duman & Kıvılcım Sistemi
   // -------------------------------------------------------------
+  createSmokeTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.90)');
+    grad.addColorStop(0.35, 'rgba(240, 245, 255, 0.55)');
+    grad.addColorStop(0.70, 'rgba(220, 230, 245, 0.18)');
+    grad.addColorStop(1, 'rgba(200, 215, 235, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(32, 32, 30, 0, Math.PI * 2);
+    ctx.fill();
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  createSkidTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 64, 0);
+    grad.addColorStop(0, 'rgba(10, 12, 16, 0)');
+    grad.addColorStop(0.12, 'rgba(12, 14, 18, 0.95)');
+    grad.addColorStop(0.40, 'rgba(18, 20, 24, 0.65)');
+    grad.addColorStop(0.60, 'rgba(12, 14, 18, 0.95)');
+    grad.addColorStop(0.88, 'rgba(12, 14, 18, 0.95)');
+    grad.addColorStop(1, 'rgba(10, 12, 16, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
   initParticlePool() {
-    // 60 adet yeniden kullanılabilir duman küresi
-    const geom = new THREE.SphereGeometry(0.22, 5, 5);
-    for (let i = 0; i < 60; i++) {
-      const p = new THREE.Mesh(geom, this.materials.smokeWhite.clone());
+    this.smokeTexture = this.createSmokeTexture();
+    const geom = new THREE.PlaneGeometry(1.0, 1.0);
+    this.smokeMat = new THREE.MeshBasicMaterial({
+      map: this.smokeTexture,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 80; i++) {
+      const p = new THREE.Mesh(geom, this.smokeMat.clone());
       p.visible = false;
       this.scene.add(p);
       this.smokePool.push(p);
@@ -560,19 +463,26 @@ class HighwayEngine {
       if (!p) break;
 
       p.visible = true;
+      p.material = this.smokeMat;
+      p.material.opacity = 0.70;
       p.position.set(
-        worldPos.x + (Math.random() - 0.5) * 0.8,
-        0.18 + Math.random() * 0.15,
+        worldPos.x + (Math.random() - 0.5) * 0.9,
+        0.25 + Math.random() * 0.15,
         worldPos.z - 1.8 - Math.random() * 0.4
       );
-      p.scale.set(1.0, 1.0, 1.0);
-      p.material.opacity = 0.65;
+      const initScale = 0.8 + Math.random() * 0.4;
+      p.scale.set(initScale, initScale, initScale);
+      p.rotation.z = Math.random() * Math.PI * 2;
       p.userData = {
         vx: (Math.random() - 0.5) * 1.5,
-        vy: 0.8 + Math.random() * 1.2,
-        vz: -2.0 - Math.random() * 3.0,
-        grow: 2.8 + Math.random() * 1.5,
-        life: 0.65
+        vy: 1.2 + Math.random() * 1.5,
+        vz: -2.5 - Math.random() * 4.0,
+        rotSpeed: (Math.random() - 0.5) * 4.0,
+        grow: 3.5 + Math.random() * 1.8,
+        life: 0.75,
+        maxLife: 0.75,
+        baseOpacity: 0.70,
+        isSmoke: true
       };
       this.activeParticles.push(p);
     }
@@ -584,19 +494,26 @@ class HighwayEngine {
       if (!p) break;
 
       p.visible = true;
+      p.material = this.smokeMat;
+      p.material.opacity = 0.92;
       p.position.set(
         worldPos.x + (Math.random() - 0.5) * 1.4,
-        0.2 + Math.random() * 0.25,
+        0.30 + Math.random() * 0.25,
         worldPos.z - 1.9 - Math.random() * 0.5
       );
-      p.scale.set(1.4, 1.4, 1.4);
-      p.material.opacity = 0.85;
+      const initScale = 1.3 + Math.random() * 0.6;
+      p.scale.set(initScale, initScale, initScale);
+      p.rotation.z = Math.random() * Math.PI * 2;
       p.userData = {
-        vx: (Math.random() - 0.5) * 3.0,
-        vy: 1.5 + Math.random() * 2.5,
-        vz: -2.0 - Math.random() * 4.0,
-        grow: 4.2 + Math.random() * 2.0,
-        life: 0.95
+        vx: (Math.random() - 0.5) * 3.5,
+        vy: 2.2 + Math.random() * 3.0,
+        vz: -3.0 - Math.random() * 5.0,
+        rotSpeed: (Math.random() - 0.5) * 5.5,
+        grow: 5.5 + Math.random() * 2.5,
+        life: 1.1,
+        maxLife: 1.1,
+        baseOpacity: 0.92,
+        isSmoke: true
       };
       this.activeParticles.push(p);
     }
@@ -614,14 +531,18 @@ class HighwayEngine {
         0.08,
         worldPos.z - 1.1 - Math.random() * 0.2
       );
-      p.scale.set(0.4, 0.4, 0.4);
+      p.scale.set(0.3, 0.3, 0.3);
       p.userData = {
         vx: (Math.random() - 0.5) * 2.5,
         vy: 0.8 + Math.random() * 1.5,
         vz: -1.0 - Math.random() * 4.0,
-        grow: 0.5,
+        rotSpeed: 0,
+        grow: 0.4,
         life: 0.35,
-        isSpark: true
+        maxLife: 0.35,
+        baseOpacity: 1.0,
+        isSpark: true,
+        isSmoke: false
       };
       this.activeParticles.push(p);
     }
@@ -651,9 +572,13 @@ class HighwayEngine {
         vx: Math.cos(angle) * speed,
         vy: upSpeed,
         vz: Math.sin(angle) * speed,
+        rotSpeed: 0,
         grow: -0.12,
         life: 1.2 + Math.random() * 0.5,
+        maxLife: 1.2,
+        baseOpacity: 1.0,
         isSpark: false,
+        isSmoke: false,
         isFirework: true
       };
       this.activeParticles.push(p);
@@ -661,19 +586,22 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 5. Asfaltta Kalan Lastik İzi (Skid Marks) Sistemi (Kesintisiz Şeritler)
+  // 5. Asfaltta Kalan Kusursuz Lastik İzi (Skid Marks) Sistemi
   // -------------------------------------------------------------
   initSkidMarkPool() {
-    // Birim quad geometrisi (Z ekseninde 1.0m, kalınlık 0.28m)
-    const geom = new THREE.PlaneGeometry(0.28, 1.0);
+    this.skidTexture = this.createSkidTexture();
+    const geom = new THREE.PlaneGeometry(0.26, 1.0);
     geom.rotateX(-Math.PI / 2); // Yere paralel asfalt temas yüzeyi
 
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 350; i++) {
       const mat = new THREE.MeshBasicMaterial({
-        color: 0x0a0c10,
+        map: this.skidTexture,
         transparent: true,
-        opacity: 0.90,
-        depthWrite: false
+        opacity: 0.92,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1.0,
+        polygonOffsetUnits: -2.0
       });
       const mesh = new THREE.Mesh(geom, mat);
       mesh.visible = false;
@@ -727,8 +655,8 @@ class HighwayEngine {
       const dz = curLocalZ - prev.z;
       const dist = Math.hypot(dx, dz);
 
-      // Çok minik adımlarda boşa mesh harcama (en az 12 cm hareket)
-      if (dist < 0.12) return;
+      // En az 10 cm harekette yeni iz bas
+      if (dist < 0.10) return;
 
       const mark = this.skidMarkPool.find(m => !m.visible);
       if (!mark) return;
@@ -738,10 +666,9 @@ class HighwayEngine {
       const trackAngle = Math.atan2(dx, dz);
 
       mark.visible = true;
-      mark.material.opacity = 0.90;
-      // 0.35m ek bindirme (overlap) ile kesiklik tamamen yok edilir, pürüzsüz sürekli kauçuk şeridi oluşur
+      mark.material.opacity = 0.92;
       mark.scale.set(1.0, 1.0, dist + 0.35);
-      mark.position.set(midX, 0.012, midZ);
+      mark.position.set(midX, 0.015, midZ);
       mark.rotation.y = trackAngle;
       mark.userData = { life: 9.0, seg: bestSeg };
 
@@ -776,16 +703,13 @@ class HighwayEngine {
       }
     });
 
-    // 2. 3D Şehir Bloklarını Akıcı Döndür (195m kesintisiz cadde döngüsü)
+    // 2. 3D Şehir Bloklarını Akıcı Döndür (140m kesintisiz cadde döngüsü)
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;
-      if (block.position.z < -97.5) {
-        block.position.z += 195.0;
+      if (block.position.z < -70.0) {
+        block.position.z += 140.0;
       }
     });
-
-    // 3. Uzak Metropol Ufuk Çizgisi: 360° sabit çevre silueti (Hiçbir açıda boşluk kalmaz)
-    // Sabit metropol ufku ile gerçek dünya derinlik hissi kilitlendi.
 
     // 3. Konfeti Salınımı (Kamera eksenini kirletmeden yumuşak süzülme)
     if (this.confettiParticles) {
@@ -809,7 +733,7 @@ class HighwayEngine {
 
       if (p.userData.life <= 0) {
         p.visible = false;
-        if (p.userData.isSpark || p.userData.isFirework) p.material = this.materials.smokeWhite;
+        if (p.userData.isSpark || p.userData.isFirework) p.material = this.smokeMat;
         this.activeParticles.splice(i, 1);
         continue;
       }
@@ -827,7 +751,11 @@ class HighwayEngine {
       p.scale.y = Math.max(0.05, p.scale.y + scaleInc);
       p.scale.z = Math.max(0.05, p.scale.z + scaleInc);
 
-      if (!p.userData.isSpark) {
+      if (p.userData.isSmoke) {
+        p.rotation.z += (p.userData.rotSpeed || 0) * dt;
+        const fade = Math.max(0, p.userData.life / (p.userData.maxLife || 1.0));
+        p.material.opacity = fade * (p.userData.baseOpacity || 0.75);
+      } else if (!p.userData.isSpark && !p.userData.isFirework) {
         p.material.opacity = Math.max(0, p.userData.life);
       }
     }

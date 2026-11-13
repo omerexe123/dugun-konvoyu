@@ -824,14 +824,21 @@ class ConvoyManager {
         cObj.group.rotation.y = THREE.MathUtils.lerp(cObj.group.rotation.y, targetYaw, 0.15);
         cObj.group.rotation.x = THREE.MathUtils.lerp(cObj.group.rotation.x, targetPitch, 0.12);
 
-        // Asfalt mikro titreşimi
-        cObj.group.position.y = Math.sin((cObj.rankIdx || 1) * 2.1 + Date.now() * 0.008) * 0.006;
+        // Gerçekçi Asfalt Titreşimi & Yüksek Hız İlerleme Hissi
+        const rumbleTime = Date.now() * 0.012 + (cObj.rankIdx || 1);
+        cObj.group.position.y = Math.sin(rumbleTime * 1.5) * 0.008 + (Math.sin(rumbleTime * 3.7) * 0.003);
+        // Çok hafif konvoy içi ileri-geri gaz esnemesi (gerçek sürüş hissi)
+        const cruiseSway = Math.sin(rumbleTime * 0.45) * 0.005;
+        cObj.group.position.z += cruiseSway;
       }
     });
 
-    // Gelin arabası mikro süspansiyon nefesi
+    // Gelin arabası: Yüksek hız süzülüşü ve amortisör nefesi
     if (this.leadCar) {
-      this.leadCar.position.y = Math.sin(Date.now() * 0.006) * 0.005;
+      const leadTime = Date.now() * 0.012;
+      this.leadCar.position.y = Math.sin(leadTime * 1.6) * 0.007 + (Math.sin(leadTime * 3.5) * 0.003);
+      this.leadCar.rotation.z = Math.sin(leadTime * 0.45) * 0.004;
+      this.leadCar.rotation.x = Math.sin(leadTime * 0.75) * 0.003;
     }
 
     // 2. KESİN VE SERT ÇARPIŞMA / İÇ İÇE GİRME ENGELLEYİCİ (Hard Non-Penetration Clamp)
@@ -870,7 +877,7 @@ class ConvoyManager {
         });
       }
       if (carWheels && carWheels.length > 0) {
-        const mult = (cObj.isDrifting || cObj.isBurnout) ? 1.75 : 1.0;
+        const mult = cObj.isBurnout ? 4.2 : (cObj.isDrifting ? 2.0 : 1.0);
         carWheels.forEach(w => {
           w.rotation.x += baseWheelSpeed * mult * dt;
         });

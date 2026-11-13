@@ -181,11 +181,39 @@ const CarFactory = {
   },
 
   // Kernel Seviyesinde Model Bütünlüğünü Koruyan Tekerlek Kontrolü
-  // GLTF hiyerarşisini bozup parçaları gökyüzüne uçurmadan güvenli dönüş
+  // Her aracın tekerleklerini tespit edip bağımsız 60 FPS yuvarlanma sağlar
   setupVehicleWheels(container, isMotor = false) {
-    // Model hiyerarşisini asla parçalama (Mesh unparenting GLTF matrislerini bozar!)
-    // Geometrik bütünlük korunur.
-    return [];
+    const wheels = [];
+    if (!container) return wheels;
+
+    container.traverse(ch => {
+      if (!ch) return;
+      const name = (ch.name || '').toLowerCase();
+      // İç mekan, gösterge, ayna veya direksiyonu atla
+      if (/steering|steer|dash|panel|gauge|dial|door|bumper|skirt|trim|caliper|exhaust|mirror|glass/i.test(name)) return;
+      
+      // Tekerlekler grubu (bütün arabayı içeren ana parent node'u atla)
+      if (name === 'wheels' || name === 'wheels_17' || name === 'wheels.001') return;
+
+      if (/wheel|tire|rim|tyre|teker/i.test(name)) {
+        // En dış ebeveyn tekerlek node'unu seç (iç içe meshleri çift döndürmemek için)
+        let parent = ch.parent;
+        let isChildOfWheel = false;
+        while (parent && parent !== container) {
+          const pName = (parent.name || '').toLowerCase();
+          if (pName !== 'wheels' && pName !== 'wheels_17' && pName !== 'wheels.001' && /wheel|tire|rim|tyre|teker/i.test(pName)) {
+            isChildOfWheel = true;
+            break;
+          }
+          parent = parent.parent;
+        }
+        if (!isChildOfWheel) {
+          wheels.push(ch);
+        }
+      }
+    });
+
+    return wheels;
   },
 
   // ===========================================================
