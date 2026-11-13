@@ -36,10 +36,10 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 1. Sonsuz Şehir Zemin Tabanı & Kesintisiz 3 Şeritli Prestij Bulvarı
+  // 1. Sonsuz Şehir Zemin Tabanı (Derin Asfalt Altlığı)
   // -------------------------------------------------------------
   initRoad() {
-    // 1. Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı
+    // Şehir binalarının ve ufkun altına sonsuz derin asfalt tabanı (ufuk boşluğunu engeller)
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
@@ -51,66 +51,6 @@ class HighwayEngine {
     groundMesh.position.y = -0.08;
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
-
-    // 2. 480 Metrelik Kesintisiz 3 Şeritli Bulvar Asfaltı (4 segment x 120m)
-    // Şehir modelindeki tüm kavşak ve çizgi kırılmalarını yok eden pürüzsüz otoyol
-    const asphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x242831,
-      roughness: 0.82,
-      metalness: 0.08
-    });
-    const yellowStripeMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
-    const whiteStripeMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
-
-    this.roadSegments = [];
-    const segLength = 120;
-    const roadWidth = 9.46; // Modelin kaldırımları arasındaki tam asfalt genişliği
-
-    for (let i = 0; i < 4; i++) {
-      const zOffset = (i * segLength) - (segLength * 1.5);
-      const segGroup = new THREE.Group();
-
-      // Ana Asfalt Yüzeyi (y = 0.003, model zeminini tamamen örten kusursuz katman)
-      const roadGeo = new THREE.PlaneGeometry(roadWidth, segLength);
-      roadGeo.rotateX(-Math.PI / 2);
-      const roadMesh = new THREE.Mesh(roadGeo, asphaltMat);
-      roadMesh.position.y = 0.003;
-      roadMesh.receiveShadow = true;
-      segGroup.add(roadMesh);
-
-      // Çift Sarı Orta Çizgi (x = ±0.11m)
-      [-0.11, 0.11].forEach(lx => {
-        const yGeo = new THREE.PlaneGeometry(0.10, segLength);
-        yGeo.rotateX(-Math.PI / 2);
-        const yLine = new THREE.Mesh(yGeo, yellowStripeMat);
-        yLine.position.set(lx, 0.006, 0);
-        segGroup.add(yLine);
-      });
-
-      // Kesikli Beyaz Şerit Çizgileri (-2.36m ve +2.36m, 3 Şerit Sınırları)
-      [-2.36, 2.36].forEach(lx => {
-        for (let sz = -segLength / 2 + 3; sz <= segLength / 2 - 3; sz += 9) {
-          const dGeo = new THREE.PlaneGeometry(0.18, 4.5);
-          dGeo.rotateX(-Math.PI / 2);
-          const dash = new THREE.Mesh(dGeo, whiteStripeMat);
-          dash.position.set(lx, 0.006, sz);
-          segGroup.add(dash);
-        }
-      });
-
-      // Beyaz Emniyet Kenar Çizgileri (-4.65m ve +4.65m)
-      [-4.65, 4.65].forEach(ex => {
-        const eGeo = new THREE.PlaneGeometry(0.18, segLength);
-        eGeo.rotateX(-Math.PI / 2);
-        const edgeLine = new THREE.Mesh(eGeo, whiteStripeMat);
-        edgeLine.position.set(ex, 0.006, 0);
-        segGroup.add(edgeLine);
-      });
-
-      segGroup.position.z = zOffset;
-      this.scene.add(segGroup);
-      this.roadSegments.push(segGroup);
-    }
   }
 
   // -------------------------------------------------------------
@@ -132,25 +72,13 @@ class HighwayEngine {
       HighwayEngine.isLoadingCity = false;
       const baseScene = gltf.scene;
 
-      // 60 FPS KİLİT OPTİMİZASYON & ENGELLERİN TEMİZLENMESİ:
+      // 60 FPS KİLİT OPTİMİZASYON & ALÇAK DİREKLERİN KALDIRILMASI:
       baseScene.traverse(ch => {
         if (!ch) return;
         const name = (ch.name || '').toLowerCase();
 
         // 1. Arabalara ve kameraya çarpan alçak trafik ışığı kollarını gizle:
         if (name.includes('circle.006') || name.includes('circle.007')) {
-          ch.visible = false;
-          return;
-        }
-
-        // 2. Asfaltın ortasındaki çirkin siyah delikleri (grate) gizle:
-        if (name.includes('grate') || (name.includes('plane.') && !name.includes('road'))) {
-          ch.visible = false;
-          return;
-        }
-
-        // 3. Model içindeki kesik, bozuk eski yol çizgilerini gizle:
-        if (name.includes('roadmarking')) {
           ch.visible = false;
           return;
         }
@@ -496,18 +424,18 @@ class HighwayEngine {
   }
 
   emitSkidMarks(carId, worldPos, yawAngle = 0, isMotor = false) {
-    // Aracın bulunduğu en yakın yol segmentini bul
-    if (!this.roadSegments || this.roadSegments.length === 0) return;
-    let bestSeg = this.roadSegments[0];
-    let minDist = Math.abs(worldPos.z - bestSeg.position.z);
-    for (let i = 1; i < this.roadSegments.length; i++) {
-      const d = Math.abs(worldPos.z - this.roadSegments[i].position.z);
+    // Aracın bulunduğu en yakın şehir cadde bloğunu bul
+    if (!this.cityBlocks || this.cityBlocks.length === 0) return;
+    let bestBlock = this.cityBlocks[0];
+    let minDist = Math.abs(worldPos.z - bestBlock.position.z);
+    for (let i = 1; i < this.cityBlocks.length; i++) {
+      const d = Math.abs(worldPos.z - this.cityBlocks[i].position.z);
       if (d < minDist) {
         minDist = d;
-        bestSeg = this.roadSegments[i];
+        bestBlock = this.cityBlocks[i];
       }
     }
-    if (!bestSeg) return;
+    if (!bestBlock) return;
 
     // Arka tekerleklerin dünya konumları (açıya göre)
     const cosY = Math.cos(yawAngle);
@@ -526,13 +454,13 @@ class HighwayEngine {
     offsets.forEach((off, idx) => {
       const wx = worldPos.x + off.x;
       const wz = worldPos.z + off.z;
-      const curLocalX = wx;
-      const curLocalZ = wz - bestSeg.position.z;
+      const curLocalX = wx - bestBlock.position.x;
+      const curLocalZ = wz - bestBlock.position.z;
       const key = `${carId || 'c'}_${idx}`;
 
       const prev = this.lastWheelPositions[key];
-      if (!prev || prev.seg !== bestSeg) {
-        this.lastWheelPositions[key] = { x: curLocalX, z: curLocalZ, seg: bestSeg };
+      if (!prev || prev.seg !== bestBlock) {
+        this.lastWheelPositions[key] = { x: curLocalX, z: curLocalZ, seg: bestBlock };
         return;
       }
 
@@ -553,13 +481,13 @@ class HighwayEngine {
       mark.visible = true;
       mark.material.opacity = 0.92;
       mark.scale.set(1.0, 1.0, dist + 0.35);
-      mark.position.set(midX, 0.008, midZ);
+      mark.position.set(midX, 0.02, midZ);
       mark.rotation.y = trackAngle;
-      mark.userData = { life: 9.0, seg: bestSeg };
+      mark.userData = { life: 9.0, seg: bestBlock };
 
-      if (mark.parent !== bestSeg) {
+      if (mark.parent !== bestBlock) {
         if (mark.parent) mark.parent.remove(mark);
-        bestSeg.add(mark);
+        bestBlock.add(mark);
       }
       this.activeSkidMarks.push(mark);
 
@@ -580,15 +508,7 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 1. Kesintisiz 3 Şeritli Bulvar Segmentlerini Kaydır (480m sonsuz döngü)
-    this.roadSegments.forEach(seg => {
-      seg.position.z -= moveDist;
-      if (seg.position.z < -240) {
-        seg.position.z += 480;
-      }
-    });
-
-    // 2. 3D Şehir Bloklarını Akıcı Kaydır (500m devasa sonsuz döngü)
+    // 3D Şehir Bloklarını Akıcı Kaydır (500m devasa sonsuz döngü)
     const loopLen = this.cityLoopLength || 124.25;
     const minZ = -loopLen * 2.0;
     const wrapDistance = loopLen * 4.0;
