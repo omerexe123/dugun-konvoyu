@@ -35,7 +35,7 @@ const CarFactory = {
     7: { file: 'models/mercedes_a45s_amg_sedan.glb', targetL: 4.55, rotY: 0, name: 'Mercedes-AMG A45S', hlX: 0.62, hlY: 0.60, hlZ: 2.12 },
     8: { file: 'models/bmw_m5_e39.glb', targetL: 4.80, rotY: 0, name: 'BMW M5 E39 V8', hlX: 0.60, hlY: 0.60, hlZ: 2.22 },
     9: { file: 'models/bmw_x7_m60i.glb', targetL: 5.15, rotY: 0, name: 'BMW X7 M60i SUV', hlX: 0.70, hlY: 0.80, hlZ: 2.40 },
-    10: { file: 'models/2024_mercedes_benz_eqs_580.glb', targetL: 5.20, rotY: 0, name: 'Mercedes EQS 580 Maybach', hlX: 0.65, hlY: 0.62, hlZ: 2.42 }
+    10: { file: 'models/bmw_g20_330i.glb', targetL: 4.80, rotY: 0, name: 'BMW 330i M-Sport Competition', hlX: 0.64, hlY: 0.62, hlZ: 2.25 }
   },
 
   // Özel Motosiklet Kademeleri (5 TL'lik TikTok Hediyesi)
@@ -187,8 +187,8 @@ const CarFactory = {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|w206_wheel.*|inmx7m60i_wheel.*|m_m_tire.*|wheel_rf_dummy.*|polo17wheel.*|tire_01a_.*)$/i;
-    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl/i;
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|.*_(FL|FR|RL|RR)(_\d+)?|w206_tire.*|w206_wheel.*|inmx7m60i_wheel.*|m_m_tire.*|polo17wheel.*|tire_01a_.*|wheel_lf\.child.*)$/i;
+    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy/i;
 
     const candidates = [];
 
@@ -378,6 +378,9 @@ const CarFactory = {
           if (matName.includes('body') || matName.includes('paint') || matName.includes('car_paint') || meshName.includes('body')) {
             ch.material.roughness = 0.20;
             ch.material.metalness = 0.58;
+            if (ch.material.color && ch.material.color.getHex() === 0x000000) {
+              ch.material.color.setHex(0x1a202c);
+            }
           }
         }
       });

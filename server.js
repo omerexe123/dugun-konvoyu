@@ -26,7 +26,7 @@ const CAR_TIERS = [
   { tier: 7, name: 'Mercedes-AMG A45S', scoreMin: 900, color: '#84cc16', file: 'models/mercedes_a45s_amg_sedan.glb' },
   { tier: 8, name: 'BMW M5 E39 V8 Canavar', scoreMin: 1600, color: '#111111', file: 'models/bmw_m5_e39.glb' },
   { tier: 9, name: 'BMW X7 M60i Luxury SUV', scoreMin: 3200, color: '#0f172a', file: 'models/bmw_x7_m60i.glb' },
-  { tier: 10, name: 'Mercedes EQS 580 Maybach', scoreMin: 5500, color: '#7c3aed', file: 'models/2024_mercedes_benz_eqs_580.glb' }
+  { tier: 10, name: 'BMW 330i M-Sport Competition', scoreMin: 5500, color: '#2563eb', file: 'models/bmw_g20_330i.glb' }
 ];
 
 // Özel Motosiklet Kademeleri (5 TL'lik TikTok Hediyesi)
