@@ -49,39 +49,45 @@ const CarFactory = {
   GELIN_MODEL: 'models/mercedes-_benz_w206_c220.glb',
   GELIN_ROT_Y: 0,
 
+  // Modeller ihtiyaç oldukça (lazy) yüklenir: açılışta ~450MB yerine sadece gelin arabası + 1. kademe iner.
+  _loader: null,
+  _loadQueue: [],
+  _loadingFiles: {},
+  _activeLoads: 0,
+
   init() {
     if (this.isLoading || this.isLoaded) return;
     this.isLoading = true;
-
     if (typeof THREE.GLTFLoader === 'undefined') {
       console.warn('[CarFactory] GLTFLoader bulunamadı.');
       return;
     }
+    this._loader = new THREE.GLTFLoader();
+    this.getModel(this.GELIN_MODEL);
+    if (this.TIER_MAP[1]) this.getModel(this.TIER_MAP[1].file);
+  },
 
-    const loader = new THREE.GLTFLoader();
-    const filesToLoad = new Set([
-      this.GELIN_MODEL,
-      ...Object.values(this.TIER_MAP).map(t => t.file),
-      ...Object.values(this.MOTOR_MAP).map(m => m.file)
-    ]);
+  // Cache'te varsa döndürür, yoksa yüklemeyi sıraya alır ve undefined döner
+  getModel(file) {
+    if (this.gltfCache[file]) return this.gltfCache[file];
+    if (!this._loader || this._loadingFiles[file]) return undefined;
+    this._loadingFiles[file] = true;
+    this._loadQueue.push(file);
+    this._pumpLoads();
+    return undefined;
+  },
 
-    const fileList = Array.from(filesToLoad);
-    let loaded = 0;
-
-    // Donmayı önlemek için modeller aynı anda değil, 2 paralel kuyrukla indirilir
-    const queue = fileList.slice();
-    const pump = () => {
-      const f = queue.shift();
-      if (!f) return;
-      loader.load(
+  _pumpLoads() {
+    while (this._activeLoads < 2 && this._loadQueue.length > 0) {
+      const f = this._loadQueue.shift();
+      this._activeLoads++;
+      const finish = () => { this._activeLoads--; this._pumpLoads(); };
+      this._loader.load(
         f,
         gltf => {
           this.gltfCache[f] = gltf.scene;
           this.queueTexturesForUpload(gltf.scene);
-          loaded++;
-          pump();
-          // Model yüklenir yüklenmez bekletmeden anında sahneyi güncelle
-          // Tüm arabaları her modelde baştan kurmak yerine toplu (debounce) yenile
+          finish();
           clearTimeout(this._reloadTimer);
           const doReload = () => {
             if (this._texPumping) { this._reloadTimer = setTimeout(doReload, 200); return; }
@@ -90,28 +96,16 @@ const CarFactory = {
             }
           };
           this._reloadTimer = setTimeout(doReload, 400);
-          if (loaded === fileList.length) {
-            this.isLoaded = true;
-            this.isLoading = false;
-            console.log(`[CarFactory] Tüm ${loaded} GLB modeli yüklendi!`);
-          }
         },
         undefined,
         err => {
-          pump();
-          console.warn(`[CarFactory] Model yükleme hatası (${f}):`, err.message);
-          loaded++;
-          if (loaded === fileList.length) {
-            this.isLoaded = true;
-            this.isLoading = false;
-          }
+          console.warn(`[CarFactory] Model yükleme hatası (${f}):`, err && err.message);
+          delete this._loadingFiles[f];
+          finish();
         }
       );
-    };
-    pump();
-    pump();
+    }
   },
-
   // Büyük GLB dokularını GPU'ya kare başına 1 adet yükle (araç ilk göründüğünde oluşan donmayı engeller, kalite aynı)
   _texQueue: [],
   _texPumping: false,
@@ -317,7 +311,7 @@ const CarFactory = {
   // ===========================================================
   createGelinArabasi(brideName = 'Gelin', groomName = 'Damat') {
     const group = new THREE.Group();
-    const rawGltf = this.gltfCache[this.GELIN_MODEL];
+    const rawGltf = this.getModel(this.GELIN_MODEL);
 
     if (rawGltf) {
       const carMesh = this.normalizeModel(rawGltf, 4.85, false, this.GELIN_ROT_Y);
@@ -409,7 +403,7 @@ const CarFactory = {
     const group = new THREE.Group();
     const safeTier = Math.max(1, Math.min(10, tier || 1));
     const config = this.TIER_MAP[safeTier];
-    const rawGltf = this.gltfCache[config.file];
+    const rawGltf = this.getModel(config.file);
 
     if (rawGltf) {
       const carMesh = this.normalizeModel(rawGltf, config.targetL, false, config.rotY !== undefined ? config.rotY : 0);
@@ -498,7 +492,7 @@ const CarFactory = {
     const group = new THREE.Group();
     const safeTier = Math.max(1, Math.min(4, tier || 1));
     const config = this.MOTOR_MAP[safeTier];
-    const rawGltf = this.gltfCache[config.file];
+    const rawGltf = this.getModel(config.file);
 
     // Tek teker (Wheelie) animasyonu için arka teker temas noktası (Y=0, Z=-0.85)
     // Motor öne (+Z) baktığı için arka tekerlek -Z konumundadır!
