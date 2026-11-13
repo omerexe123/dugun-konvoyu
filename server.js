@@ -770,7 +770,11 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
 }
 
 function getSortedConvoy() {
-  return Object.values(gameState.users).sort((a, b) => b.points - a.points);
+  return Object.values(gameState.users).sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    // Eşit puanda katılım sırası ve ID ile tam kararlı sıralama (şeritlerin anlamsızca takas edilmesini engeller)
+    return (a.joinedAt || 0) - (b.joinedAt || 0) || String(a.uniqueId).localeCompare(String(b.uniqueId));
+  });
 }
 
 // -------------------------------------------------------------
