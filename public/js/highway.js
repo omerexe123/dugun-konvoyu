@@ -19,16 +19,46 @@ class HighwayEngine {
     this.skidMarkPool = [];
     this.activeSkidMarks = [];
 
+    // Gerçekçi PBR Fiziksel Materyaller
     this.materials = {
-      roadAsphalt: new THREE.MeshLambertMaterial({ color: 0x181a1d }),
-      roadStripe: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-      curbStone: new THREE.MeshLambertMaterial({ color: 0xd6ccc2 }),
-      sidewalk: new THREE.MeshLambertMaterial({ color: 0x64748b }),
-      grassVerge: new THREE.MeshLambertMaterial({ color: 0x1e3a2f }),
+      roadAsphalt: new THREE.MeshStandardMaterial({
+        color: 0x16181c,
+        roughness: 0.85,
+        metalness: 0.08
+      }),
+      roadStripe: new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.40,
+        metalness: 0.05
+      }),
+      curbStone: new THREE.MeshStandardMaterial({
+        color: 0x94a3b8,
+        roughness: 0.65,
+        metalness: 0.05
+      }),
+      sidewalk: new THREE.MeshStandardMaterial({
+        color: 0x334155,
+        roughness: 0.78,
+        metalness: 0.05
+      }),
+      grassVerge: new THREE.MeshStandardMaterial({
+        color: 0x14532d,
+        roughness: 0.90,
+        metalness: 0.02
+      }),
+      plazaWalk: new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.75,
+        metalness: 0.08
+      }),
       
       // Aydınlatma
-      lampPole: new THREE.MeshLambertMaterial({ color: 0x2b2d42 }),
-      lampBulb: new THREE.MeshBasicMaterial({ color: 0xffd166 }),
+      lampPole: new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.35,
+        metalness: 0.85
+      }),
+      lampBulb: new THREE.MeshBasicMaterial({ color: 0xffedd5 }),
 
       // Duman & Kıvılcım
       smokeWhite: new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.65 }),
@@ -38,6 +68,7 @@ class HighwayEngine {
 
     this.initRoad();
     this.initCityModel();
+    this.initTreeModels();
     this.initConfetti();
     this.initParticlePool();
     this.initSkidMarkPool();
@@ -49,12 +80,13 @@ class HighwayEngine {
   // 1. Sonsuz 3 Şeritli Bulvar & Devasa Zemin İnşası
   // -------------------------------------------------------------
   initRoad() {
-    // 1600x1600m devasa ufuk zemin düzlemi (Asla boş gökyüzü deliği kalmaz!)
+    // 1600x1600m devasa ufuk zemin düzlemi
     const groundGeo = new THREE.PlaneGeometry(1600, 1600);
     groundGeo.rotateX(-Math.PI / 2);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x0a101d });
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x090d16 });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
     groundMesh.position.y = -0.36;
+    groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
     // 4 segment x 160m = 640 metrelik kesintisiz otoyol (Z: -320m ile +320m arası)
@@ -77,12 +109,14 @@ class HighwayEngine {
     // Asfalt Yol
     const road = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.3, length), this.materials.roadAsphalt);
     road.position.y = -0.15;
+    road.receiveShadow = true;
     g.add(road);
 
     // Beyaz Güvenlik Kenar Çizgileri
     [-5.6, 5.6].forEach(ex => {
       const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, length), this.materials.roadStripe);
       edgeLine.position.set(ex, 0.01, 0);
+      edgeLine.receiveShadow = true;
       g.add(edgeLine);
     });
 
@@ -91,6 +125,7 @@ class HighwayEngine {
       for (let sz = -length / 2 + 5; sz <= length / 2 - 5; sz += 9) {
         const dash = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 5.2), this.materials.roadStripe);
         dash.position.set(lx, 0.01, sz);
+        dash.receiveShadow = true;
         g.add(dash);
       }
     });
@@ -100,34 +135,98 @@ class HighwayEngine {
       for (let zx = -5.0; zx <= 5.0; zx += 1.25) {
         const zebra = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.02, 3.8), this.materials.roadStripe);
         zebra.position.set(zx, 0.015, zz);
+        zebra.receiveShadow = true;
         g.add(zebra);
       }
     });
 
-    // Sağ ve Sol Kaldırımlar & Sokak Lambaları
+    // Sağ ve Sol Kaldırımlar, Park Şeritleri, Ağaçlar & Sokak Lambaları (Boşluksuz 26m Kesintisiz Zemin)
     [-1, 1].forEach(side => {
       const dirX = side;
-      // Bordür Taşı
+      // Bordür Taşı (6.0m - 6.4m)
       const curb = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, length), this.materials.curbStone);
       curb.position.set(dirX * 6.2, 0.14, 0);
+      curb.castShadow = true;
+      curb.receiveShadow = true;
       g.add(curb);
 
-      // Yaya Kaldırımı
-      const walk = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.22, length), this.materials.sidewalk);
-      walk.position.set(dirX * 9.4, 0.11, 0);
+      // Yaya Kaldırımı (6.4m - 13.4m, Genişlik: 7.0m)
+      const walk = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.22, length), this.materials.sidewalk);
+      walk.position.set(dirX * 9.9, 0.11, 0);
+      walk.receiveShadow = true;
       g.add(walk);
 
-      // Ağaçlı Yeşil Şerit
-      const verge = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.2, length), this.materials.grassVerge);
-      verge.position.set(dirX * 13.6, 0.1, 0);
+      // Ağaçlı Yeşil Şerit (13.4m - 18.4m, Genişlik: 5.0m)
+      const verge = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.24, length), this.materials.grassVerge);
+      verge.position.set(dirX * 15.9, 0.12, 0);
+      verge.receiveShadow = true;
       g.add(verge);
 
-      // Modern Sokak Lambaları
+      // Gökdelen Önü Granit Meydan / Plaza (18.4m - 26.0m, Genişlik: 7.6m)
+      const plaza = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.20, length), this.materials.plazaWalk);
+      plaza.position.set(dirX * 22.2, 0.10, 0);
+      plaza.receiveShadow = true;
+      g.add(plaza);
+
+      // Modern Sokak Lambaları (Kaldırım kenarında dirX * 6.7)
       for (let tz = -length / 2 + 15; tz <= length / 2 - 15; tz += 24) {
         const lamp = this.createStreetLamp(dirX);
-        lamp.position.set(dirX * 6.6, 0.2, tz);
+        lamp.position.set(dirX * 6.7, 0.2, tz);
         g.add(lamp);
       }
+    });
+  }
+
+  // -------------------------------------------------------------
+  // 1.2 Gerçek 3D Ağaçların (tree_large & tree_small) Yüklenmesi
+  // -------------------------------------------------------------
+  initTreeModels() {
+    this.treeTemplates = [];
+    if (typeof THREE.GLTFLoader === 'undefined') return;
+    const loader = new THREE.GLTFLoader();
+
+    ['models/tree_large.glb', 'models/tree_small.glb'].forEach((path, idx) => {
+      loader.load(path, gltf => {
+        const treeScene = gltf.scene;
+        treeScene.traverse(ch => {
+          if (ch.isMesh) {
+            ch.castShadow = true;
+            ch.receiveShadow = true;
+            if (ch.material) {
+              ch.material.roughness = 0.85;
+            }
+          }
+        });
+        const box = new THREE.Box3().setFromObject(treeScene);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const targetH = idx === 0 ? 7.2 : 5.0;
+        const s = targetH / (size.y || 1);
+        treeScene.scale.set(s, s, s);
+
+        this.treeTemplates.push(treeScene);
+        if (this.treeTemplates.length === 2) {
+          this.populateTrees();
+        }
+      }, undefined, err => {
+        console.warn('[HighwayEngine] Ağaç yükleme uyarısı:', err.message);
+      });
+    });
+  }
+
+  populateTrees() {
+    if (!this.treeTemplates || this.treeTemplates.length === 0) return;
+    this.roadSegments.forEach(seg => {
+      [-1, 1].forEach(side => {
+        for (let tz = -70; tz <= 70; tz += 16) {
+          const tmpl = this.treeTemplates[Math.abs(tz) % 2];
+          if (!tmpl) continue;
+          const tree = tmpl.clone(true);
+          tree.position.set(side * 15.9, 0.12, tz + (Math.sin(tz) * 1.5));
+          tree.rotation.y = (Math.abs(tz) * 0.7) % (Math.PI * 2);
+          seg.add(tree);
+        }
+      });
     });
   }
 
@@ -137,6 +236,7 @@ class HighwayEngine {
     // Dikey Direk
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 5.2, 6), this.materials.lampPole);
     pole.position.y = 2.6;
+    pole.castShadow = true;
     lamp.add(pole);
 
     // Yola doğru uzanan yatay eğik kol
@@ -157,7 +257,6 @@ class HighwayEngine {
   // -------------------------------------------------------------
   initCityModel() {
     // 1. Önce ANINDA (0 milisaniye) çalışan modern prosedürel şehir bloklarını inşa et
-    // Böylece GLB inerken harita ASLA boş kalmaz, ilk karede dopdolu ve ışıl ışıl görünür!
     this.initInstantProceduralCity();
 
     if (typeof THREE.GLTFLoader === 'undefined') return;
@@ -166,20 +265,15 @@ class HighwayEngine {
     loader.load('models/city.glb', gltf => {
       const baseScene = gltf.scene;
 
-      // Gölgeleri kapat & PBR materyalleri hafif MeshLambertMaterial ile değiştir (10x FPS artışı)
+      // Orijinal dokuları ve PBR materyalleri koru!
       baseScene.traverse(ch => {
         if (ch.isMesh) {
-          ch.castShadow = false;
-          ch.receiveShadow = false;
+          ch.castShadow = true;
+          ch.receiveShadow = true;
           ch.frustumCulled = true;
           if (ch.material) {
-            const old = ch.material;
-            ch.material = new THREE.MeshLambertMaterial({
-              color: old.color || 0xcccccc,
-              map: old.map || null,
-              transparent: old.transparent || false,
-              opacity: old.opacity !== undefined ? old.opacity : 1.0
-            });
+            ch.material.roughness = 0.70;
+            ch.material.metalness = 0.15;
           }
         }
       });
@@ -193,16 +287,16 @@ class HighwayEngine {
       const targetBlockLength = 65.0; // 65 metrelik blok
       const s = targetBlockLength / (size.z || 1);
 
-      // Peş peşe dizilecek 6 optimize şehir bloğu (3 Sol, 3 Sağ - 195 metre kesintisiz cadde)
+      // Peş peşe dizilecek 6 optimize şehir bloğu (3 Sol, 3 Sağ - Kaldırım kenarı x = ±26m)
       const blockPositions = [
-        // Sol Taraf (x = -42.0)
-        { x: -42.0, z: -65.0, rotY: 0 },
-        { x: -42.0, z: 0.0, rotY: 0 },
-        { x: -42.0, z: 65.0, rotY: 0 },
-        // Sağ Taraf (x = 42.0, bulvara baksın diye 180 derece ters)
-        { x: 42.0, z: -65.0, rotY: Math.PI },
-        { x: 42.0, z: 0.0, rotY: Math.PI },
-        { x: 42.0, z: 65.0, rotY: Math.PI }
+        // Sol Taraf (x = -26.0)
+        { x: -26.0, z: -65.0, rotY: 0 },
+        { x: -26.0, z: 0.0, rotY: 0 },
+        { x: -26.0, z: 65.0, rotY: 0 },
+        // Sağ Taraf (x = 26.0)
+        { x: 26.0, z: -65.0, rotY: Math.PI },
+        { x: 26.0, z: 0.0, rotY: Math.PI },
+        { x: 26.0, z: 65.0, rotY: Math.PI }
       ];
 
       // Prosedürel geçici binaları sahneden kaldır
@@ -239,12 +333,12 @@ class HighwayEngine {
     this.proceduralBlocks = [];
 
     const blockConfigs = [
-      { x: -36.0, z: -65.0, rotY: 0 },
-      { x: -36.0, z: 0.0, rotY: 0 },
-      { x: -36.0, z: 65.0, rotY: 0 },
-      { x: 36.0, z: -65.0, rotY: Math.PI },
-      { x: 36.0, z: 0.0, rotY: Math.PI },
-      { x: 36.0, z: 65.0, rotY: Math.PI }
+      { x: -26.0, z: -65.0, rotY: 0 },
+      { x: -26.0, z: 0.0, rotY: 0 },
+      { x: -26.0, z: 65.0, rotY: 0 },
+      { x: 26.0, z: -65.0, rotY: Math.PI },
+      { x: 26.0, z: 0.0, rotY: Math.PI },
+      { x: 26.0, z: 65.0, rotY: Math.PI }
     ];
 
     const towerColors = [0x1e293b, 0x0f172a, 0x334155, 0x18181b];
@@ -390,23 +484,24 @@ class HighwayEngine {
   // 3. Konfeti Efekti
   // -------------------------------------------------------------
   initConfetti() {
-    const count = 350;
+    const count = 180;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
 
     const palette = [
       [1.0, 0.85, 0.2],  // Altın
-      [0.9, 0.1, 0.3],   // Kırmızı
-      [0.1, 0.7, 0.9],   // Turkuaz
-      [1.0, 0.4, 0.7],   // Pembe
+      [0.95, 0.15, 0.35],// Kırmızı
+      [0.15, 0.75, 0.95],// Turkuaz
+      [1.0, 0.45, 0.75], // Pembe
       [1.0, 1.0, 1.0]    // Beyaz
     ];
 
+    // Kamera z=24'te olduğu için konfetiyi sadece arabaların üzerine (z: -35 ile +6 arası) sınırla
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 36;
-      positions[i * 3 + 1] = 2.0 + Math.random() * 24;
-      positions[i * 3 + 2] = -40 + Math.random() * 90;
+      positions[i * 3] = (Math.random() - 0.5) * 11.0;
+      positions[i * 3 + 1] = 1.5 + Math.random() * 12.0;
+      positions[i * 3 + 2] = -35.0 + Math.random() * 41.0;
 
       const col = palette[i % palette.length];
       colors[i * 3] = col[0];
@@ -417,11 +512,28 @@ class HighwayEngine {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+    // Kare billboard polygonları önleyen yumuşak dairesel konfeti dokusu
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    const radGrad = ctx.createRadialGradient(16, 16, 0, 16, 16, 15);
+    radGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    radGrad.addColorStop(0.75, 'rgba(255, 255, 255, 0.95)');
+    radGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = radGrad;
+    ctx.beginPath();
+    ctx.arc(16, 16, 15, 0, Math.PI * 2);
+    ctx.fill();
+    const confettiTex = new THREE.CanvasTexture(canvas);
+
     const material = new THREE.PointsMaterial({
-      size: 0.32,
+      size: 0.20,
+      map: confettiTex,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.90,
+      depthWrite: false
     });
 
     this.confettiParticles = new THREE.Points(geometry, material);
@@ -675,14 +787,16 @@ class HighwayEngine {
     // 3. Uzak Metropol Ufuk Çizgisi: 360° sabit çevre silueti (Hiçbir açıda boşluk kalmaz)
     // Sabit metropol ufku ile gerçek dünya derinlik hissi kilitlendi.
 
-    // 3. Konfeti Salınımı
+    // 3. Konfeti Salınımı (Kamera eksenini kirletmeden yumuşak süzülme)
     if (this.confettiParticles) {
       const pos = this.confettiParticles.geometry.attributes.position.array;
       for (let i = 0; i < pos.length / 3; i++) {
         pos[i * 3 + 1] -= dt * 2.8;
-        pos[i * 3] += Math.sin(Date.now() * 0.002 + i) * 0.025;
-        if (pos[i * 3 + 1] < 0.5) {
-          pos[i * 3 + 1] = 24.0;
+        pos[i * 3] += Math.sin(Date.now() * 0.002 + i) * 0.02;
+        if (pos[i * 3 + 1] < 0.3) {
+          pos[i * 3 + 1] = 13.0;
+          pos[i * 3] = (Math.random() - 0.5) * 11.0;
+          pos[i * 3 + 2] = -35.0 + Math.random() * 41.0;
         }
       }
       this.confettiParticles.geometry.attributes.position.needsUpdate = true;

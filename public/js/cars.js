@@ -101,11 +101,11 @@ const CarFactory = {
   normalizeModel(rawScene, targetL, isMotor = false, explicitRotY = Math.PI) {
     const clone = rawScene.clone(true);
     
-    // Gölgeleri optimize et
+    // Gerçekçi 3D Gölgeleri Aktifleştir
     clone.traverse(ch => {
       if (ch.isMesh) {
-        ch.castShadow = false;
-        ch.receiveShadow = false;
+        ch.castShadow = true;
+        ch.receiveShadow = true;
       }
     });
 
@@ -205,9 +205,17 @@ const CarFactory = {
           const meshName = (ch.name || '').toLowerCase();
           if (matName.includes('body') || matName.includes('paint') || matName.includes('car_paint') || meshName.includes('body')) {
             ch.material = new THREE.MeshStandardMaterial({
-              color: 0x08090b,
-              roughness: 0.12,
-              metalness: 0.92
+              color: 0x0c0e12,
+              roughness: 0.18,
+              metalness: 0.65
+            });
+          } else if (matName.includes('glass') || matName.includes('window') || meshName.includes('glass')) {
+            ch.material = new THREE.MeshStandardMaterial({
+              color: 0x0f172a,
+              roughness: 0.05,
+              metalness: 0.5,
+              transparent: true,
+              opacity: 0.65
             });
           }
         }
@@ -286,8 +294,8 @@ const CarFactory = {
           const matName = (ch.material.name || '').toLowerCase();
           const meshName = (ch.name || '').toLowerCase();
           if (matName.includes('body') || matName.includes('paint') || matName.includes('car_paint') || meshName.includes('body')) {
-            ch.material.roughness = 0.16;
-            ch.material.metalness = 0.88;
+            ch.material.roughness = 0.20;
+            ch.material.metalness = 0.58;
           }
         }
       });

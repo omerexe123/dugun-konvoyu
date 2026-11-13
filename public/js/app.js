@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 1. Three.js Sahnesi & Kamera (Gündüz Aydınlığı)
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x38bdf8); // Parlak Gündüz Gökyüzü
-  scene.fog = new THREE.FogExp2(0x38bdf8, 0.0020);
+  scene.background = new THREE.Color(0x0284c7); // Derin Gökyüzü Mavisi
+  scene.fog = new THREE.Fog(0xbae6fd, 85, 360); // Kristal Netlik (0-85m sıfır sis, ufukta yumuşak geçiş)
 
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 500);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 600);
   camera.position.set(0, 11, 24);
 
   const renderer = new THREE.WebGLRenderer({
@@ -19,31 +19,118 @@ document.addEventListener('DOMContentLoaded', () => {
     powerPreference: 'high-performance'
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  // Retina ekranlarda 4K render yapıp GPU'yu eritmemesi için pixel ratio 1.0'a sabitlenir
-  renderer.setPixelRatio(1.0);
-  renderer.shadowMap.enabled = false;
+  // Retina ve 4K ekranlarda jaggies/pixelation olmadan kristal netlik:
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.35;
+  renderer.toneMappingExposure = 1.05;
+  if (renderer.outputColorSpace) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+  }
   container.appendChild(renderer.domElement);
 
   window.renderer = renderer;
   window.scene = scene;
 
+  // Gerçekçi Gökyüzü Kubbesi (Sky Dome Gradient)
+  const skyGeo = new THREE.SphereGeometry(450, 32, 16);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor: { value: new THREE.Color(0x0284c7) },
+      bottomColor: { value: new THREE.Color(0xe0f2fe) },
+      offset: { value: 15.0 },
+      exponent: { value: 0.65 }
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform float offset;
+      uniform float exponent;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition + offset).y;
+        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+      }
+    `
+  });
+  const skyDome = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyDome);
+
+  // Otomotiv Seviyesi Yansıma Haritası (Environment Map)
+  function setupRealisticEnvironment() {
+    try {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileEquirectangularShader();
+
+      const envCanvas = document.createElement('canvas');
+      envCanvas.width = 512;
+      envCanvas.height = 256;
+      const ctx = envCanvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#0284c7');
+      grad.addColorStop(0.48, '#7dd3fc');
+      grad.addColorStop(0.50, '#ffffff');
+      grad.addColorStop(0.53, '#94a3b8');
+      grad.addColorStop(1.0, '#1e293b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+
+      const sunGrad = ctx.createRadialGradient(256, 110, 0, 256, 110, 70);
+      sunGrad.addColorStop(0, 'rgba(255, 255, 240, 1.0)');
+      sunGrad.addColorStop(0.25, 'rgba(255, 245, 200, 0.6)');
+      sunGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(256, 110, 70, 0, Math.PI * 2);
+      ctx.fill();
+
+      const envTexture = new THREE.CanvasTexture(envCanvas);
+      envTexture.mapping = THREE.EquirectangularReflectionMapping;
+      const envRenderTarget = pmremGenerator.fromEquirectangular(envTexture);
+      scene.environment = envRenderTarget.texture;
+      pmremGenerator.dispose();
+      envTexture.dispose();
+    } catch (e) {
+      console.warn('[EnvMap] Environment map oluşturulamadı:', e);
+    }
+  }
+  setupRealisticEnvironment();
+
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.enabled = false;
 
-  // Aydınlatma (Canlı Bulvar Işıkları)
-  const ambientLight = new THREE.AmbientLight(0xffeedd, 1.1);
+  // Aydınlatma (Dengeli, Gerçekçi PBR Bulvar Işıkları)
+  const ambientLight = new THREE.AmbientLight(0xf1f5f9, 0.65);
   scene.add(ambientLight);
 
-  const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x1e293b, 0.75);
+  const hemiLight = new THREE.HemisphereLight(0x7dd3fc, 0x334155, 0.50);
   hemiLight.position.set(0, 80, 0);
   scene.add(hemiLight);
 
-  const sunLight = new THREE.DirectionalLight(0xfffaed, 1.6);
-  sunLight.position.set(25, 90, 35);
-  sunLight.castShadow = false;
+  const sunLight = new THREE.DirectionalLight(0xfff7ea, 1.35);
+  sunLight.position.set(35, 75, 45);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width = 2048;
+  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.camera.near = 1.0;
+  sunLight.shadow.camera.far = 160;
+  sunLight.shadow.camera.left = -28;
+  sunLight.shadow.camera.right = 28;
+  sunLight.shadow.camera.top = 45;
+  sunLight.shadow.camera.bottom = -45;
+  sunLight.shadow.bias = -0.0004;
+  sunLight.shadow.normalBias = 0.02;
   scene.add(sunLight);
 
   // 2. Motorlar
@@ -59,10 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEFAULT_GRAPHICS = {
     sunLight: 1.0,
     ambientLight: 1.0,
-    shadowOpacity: 65,
-    exposure: 1.35,
-    saturation: 110,
-    contrast: 105,
+    shadowOpacity: 70,
+    exposure: 1.05,
+    saturation: 112,
+    contrast: 110,
     preset: 'natural'
   };
 
@@ -70,34 +157,34 @@ document.addEventListener('DOMContentLoaded', () => {
     natural: {
       sunLight: 1.0,
       ambientLight: 1.0,
-      shadowOpacity: 65,
-      exposure: 1.35,
-      saturation: 100,
-      contrast: 100
+      shadowOpacity: 70,
+      exposure: 1.05,
+      saturation: 108,
+      contrast: 108
     },
     vibrant: {
-      sunLight: 1.25,
-      ambientLight: 1.15,
+      sunLight: 1.15,
+      ambientLight: 1.05,
       shadowOpacity: 75,
-      exposure: 1.45,
-      saturation: 130,
-      contrast: 110
+      exposure: 1.10,
+      saturation: 125,
+      contrast: 115
     },
     cinematic: {
-      sunLight: 1.1,
+      sunLight: 1.05,
       ambientLight: 0.9,
       shadowOpacity: 85,
-      exposure: 1.25,
-      saturation: 95,
+      exposure: 0.98,
+      saturation: 98,
       contrast: 120
     },
     wedding: {
-      sunLight: 1.3,
-      ambientLight: 1.2,
-      shadowOpacity: 70,
-      exposure: 1.50,
-      saturation: 115,
-      contrast: 105
+      sunLight: 1.2,
+      ambientLight: 1.1,
+      shadowOpacity: 72,
+      exposure: 1.12,
+      saturation: 114,
+      contrast: 108
     }
   };
 
@@ -107,6 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedGraphics = localStorage.getItem('convoy_graphics_settings');
     if (savedGraphics) {
       graphicsSettings = Object.assign({}, DEFAULT_GRAPHICS, JSON.parse(savedGraphics));
+      // Aşırı patlamış eski 1.35+ pozlama değerlerini sanitize et
+      if (graphicsSettings.exposure > 1.25) {
+        graphicsSettings.exposure = 1.05;
+      }
     }
   } catch (e) {
     console.warn('[Graphics] LocalStorage okunamadı:', e);
@@ -179,39 +270,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     states: {
       day: {
-        sky: new THREE.Color(0x38bdf8),
-        fog: new THREE.Color(0x38bdf8),
-        fogDensity: 0.0020,
-        ambient: new THREE.Color(0xffffff),
-        ambientInt: 1.4,
-        sun: new THREE.Color(0xfffbeb),
-        sunInt: 2.2,
-        sunPos: new THREE.Vector3(30, 95, 40),
-        hemiSky: new THREE.Color(0xbae6fd),
-        hemiGround: new THREE.Color(0x64748b),
+        skyTop: new THREE.Color(0x0284c7),
+        skyBottom: new THREE.Color(0xe0f2fe),
+        fog: new THREE.Color(0xbae6fd),
+        fogNear: 85,
+        fogFar: 360,
+        ambient: new THREE.Color(0xf1f5f9),
+        ambientInt: 0.65,
+        sun: new THREE.Color(0xfff7ea),
+        sunInt: 1.35,
+        sunPos: new THREE.Vector3(35, 75, 45),
+        hemiSky: new THREE.Color(0x7dd3fc),
+        hemiGround: new THREE.Color(0x334155),
         coneOpacity: 0.05
       },
       sunset: {
-        sky: new THREE.Color(0xd95328),
+        skyTop: new THREE.Color(0x7c2d12),
+        skyBottom: new THREE.Color(0xf97316),
         fog: new THREE.Color(0x9a3412),
-        fogDensity: 0.0030,
+        fogNear: 60,
+        fogFar: 320,
         ambient: new THREE.Color(0xfed7aa),
-        ambientInt: 0.9,
+        ambientInt: 0.50,
         sun: new THREE.Color(0xfb923c),
-        sunInt: 1.6,
+        sunInt: 1.2,
         sunPos: new THREE.Vector3(65, 30, 25),
         hemiSky: new THREE.Color(0xfb7185),
         hemiGround: new THREE.Color(0x334155),
         coneOpacity: 0.22
       },
       night: {
-        sky: new THREE.Color(0x090d16),
+        skyTop: new THREE.Color(0x020617),
+        skyBottom: new THREE.Color(0x0f172a),
         fog: new THREE.Color(0x090d16),
-        fogDensity: 0.0036,
+        fogNear: 50,
+        fogFar: 260,
         ambient: new THREE.Color(0x1e293b),
-        ambientInt: 0.45,
+        ambientInt: 0.35,
         sun: new THREE.Color(0x60a5fa),
-        sunInt: 0.4,
+        sunInt: 0.35,
         sunPos: new THREE.Vector3(15, 75, 30),
         hemiSky: new THREE.Color(0x334155),
         hemiGround: new THREE.Color(0x020617),
@@ -264,9 +361,14 @@ document.addEventListener('DOMContentLoaded', () => {
         sA = this.states.night; sB = this.states.day; f = (h - 4.5) / 1.5;
       }
 
-      scene.background.lerpColors(sA.sky, sB.sky, f);
+      if (skyDome && skyDome.material && skyDome.material.uniforms) {
+        skyDome.material.uniforms.topColor.value.lerpColors(sA.skyTop, sB.skyTop, f);
+        skyDome.material.uniforms.bottomColor.value.lerpColors(sA.skyBottom, sB.skyBottom, f);
+      }
+      scene.background.lerpColors(sA.skyTop, sB.skyTop, f);
       scene.fog.color.lerpColors(sA.fog, sB.fog, f);
-      scene.fog.density = THREE.MathUtils.lerp(sA.fogDensity, sB.fogDensity, f);
+      scene.fog.near = THREE.MathUtils.lerp(sA.fogNear, sB.fogNear, f);
+      scene.fog.far = THREE.MathUtils.lerp(sA.fogFar, sB.fogFar, f);
 
       ambientLight.color.lerpColors(sA.ambient, sB.ambient, f);
       ambientLight.intensity = THREE.MathUtils.lerp(sA.ambientInt, sB.ambientInt, f) * graphicsSettings.ambientLight;
