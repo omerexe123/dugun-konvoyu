@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     powerPreference: 'high-performance'
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  // Retina ve 4K ekranlarda jaggies/pixelation olmadan kristal netlik:
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // Retina ve 4K ekranlarda jaggies/pixelation olmadan kristal netlik & 60 FPS kilit performans:
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -121,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sunLight = new THREE.DirectionalLight(0xfff7ea, 1.35);
   sunLight.position.set(35, 75, 45);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.mapSize.width = 1024;
+  sunLight.shadow.mapSize.height = 1024;
   sunLight.shadow.camera.near = 1.0;
   sunLight.shadow.camera.far = 160;
   sunLight.shadow.camera.left = -28;

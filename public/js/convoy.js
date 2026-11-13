@@ -24,6 +24,18 @@ class ConvoyManager {
     this.currentCamPos = new THREE.Vector3(0, 6.2, 19.0);
     this.currentCamLook = new THREE.Vector3(0, 1.2, 0.0);
 
+    // 60 FPS Sıfır GC Bellek & Layout Thrashing Önleme Havuzu
+    this.activeCarsList = [];
+    this.tempV = new THREE.Vector3();
+    this.viewportW = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    this.viewportH = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => {
+        this.viewportW = window.innerWidth;
+        this.viewportH = window.innerHeight;
+      });
+    }
+
     this.initLeadCar();
 
     window.convoy = this;
@@ -49,6 +61,7 @@ class ConvoyManager {
       }
     });
     this.convoyCars = {};
+    this.activeCarsList = [];
     this.focusedCarId = null;
 
     // 2. Gelin arabası çift isimlerini güncelle
@@ -222,6 +235,7 @@ class ConvoyManager {
     if (user.neonColor) {
       this.setCarNeon(user.uniqueId, user.neonColor);
     }
+    this.activeCarsList = Object.values(this.convoyCars);
   }
 
   updateCarLabel(user, cObj, rankIdx) {
@@ -675,7 +689,7 @@ class ConvoyManager {
   // 6. Kare Başına Güncelleme (60 FPS): ACC & Çarpışma Önleme
   // -------------------------------------------------------------
   update(dt) {
-    const carsList = Object.values(this.convoyCars);
+    const carsList = this.activeCarsList;
     const now = Date.now();
     const activeGiftCar = (this.giftFocusCarId && now < this.giftFocusUntil) ? this.convoyCars[this.giftFocusCarId] : null;
 
@@ -935,6 +949,7 @@ class ConvoyManager {
         cObj.group.traverse(ch => {
           if (ch.userData && ch.userData.wheels) carWheels = ch.userData.wheels;
         });
+        cObj.group.userData.wheels = carWheels || [];
       }
       if (carWheels && carWheels.length > 0) {
         const mult = cObj.isBurnout ? 4.2 : (cObj.isDrifting ? 2.0 : 1.0);
@@ -948,9 +963,8 @@ class ConvoyManager {
     this.ambientSelektorTimer = (this.ambientSelektorTimer || 0) + dt;
     if (this.ambientSelektorTimer > 8.5) {
       this.ambientSelektorTimer = 0;
-      const cars = Object.values(this.convoyCars);
-      if (cars.length > 0 && Math.random() < 0.6) {
-        const randCar = cars[Math.floor(Math.random() * cars.length)];
+      if (carsList.length > 0 && Math.random() < 0.6) {
+        const randCar = carsList[Math.floor(Math.random() * carsList.length)];
         this.triggerSelektor(randCar.user.uniqueId);
       } else if (this.leadCar && Math.random() < 0.4) {
         this.triggerSelektor('lead');
@@ -967,11 +981,10 @@ class ConvoyManager {
   // 3D Etiketleri ve Araç LOD / Mesafe Kırpması
   updateLabels() {
     const camera = this.camera;
-    camera.updateMatrixWorld(true);
-    const container = this.labelsContainer || document.body;
-    const w = container.clientWidth || window.innerWidth;
-    const h = container.clientHeight || window.innerHeight;
-    const tempV = new THREE.Vector3();
+    // Sıfır DOM Reflow (Layout Thrashing önleyici önbellek)
+    const w = this.viewportW;
+    const h = this.viewportH;
+    const tempV = this.tempV;
 
     // Gelin Arabası Bordo Plakası (Tavanın ve sunroof'un üstünde)
     if (this.leadCar && this.leadLabelEl) {
@@ -991,7 +1004,7 @@ class ConvoyManager {
     }
 
     // Konvoy Araçları Etiketleri + Distance Culling
-    Object.values(this.convoyCars).forEach(cObj => {
+    this.activeCarsList.forEach(cObj => {
       const carPos = cObj.group.position;
 
       // 100+ araca kadar kesintisiz akış (-280m derinlik)

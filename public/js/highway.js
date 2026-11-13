@@ -98,13 +98,17 @@ class HighwayEngine {
 
         if (ch.isMesh) {
           ch.castShadow = false;
-          ch.receiveShadow = true;
-          // Yol ve binaların kamera açısında aniden kaybolmasını engelle:
-          ch.frustumCulled = false;
+
+          // Performans & Z-Fighting Kilidi:
+          // Sadece yol, kaldırım ve yol çizgilerini kesintisiz tut (asla kaybolmaz);
+          // Binalar ve çatılar kamera arkasında GPU'ya boşuna render yükü bindirmesin (Frustum Culling):
+          const matName = (ch.material?.name || '').toLowerCase();
+          const isRoadOrGround = matName.includes('material.007') || matName.includes('material.011') || matName.includes('material.009') || name.includes('road') || name.includes('street');
+          ch.frustumCulled = !isRoadOrGround;
+          ch.receiveShadow = isRoadOrGround;
 
           // PBR Doku ve Malzeme Kalitesini Koru & Şeffaf Delikleri Engelle
           if (ch.material) {
-            const matName = (ch.material.name || '').toLowerCase();
             if (matName.includes('material.009')) {
               // Yol çizgileri
               ch.material.transparent = true;
@@ -142,14 +146,12 @@ class HighwayEngine {
 
     this.cityLoopLength = blockLength;
 
-    // 6 Blok ile 750 metrelik kesintisiz dev bulvar (Konvoy hiçbir zaman blok sınırına yaklaşamaz)
+    // 4 Blok ile 500 metrelik kesintisiz dev bulvar (360m sis mesafesini %100 kapsar, 60 FPS garantisi)
     const blockZPositions = [
-      -blockLength * 3.5,
       -blockLength * 2.5,
       -blockLength * 1.5,
       -blockLength * 0.5,
-      blockLength * 0.5,
-      blockLength * 1.5
+      blockLength * 0.5
     ];
 
     // Eski bloklar varsa temizle
@@ -170,6 +172,14 @@ class HighwayEngine {
         -yRoadSurface * s,
         -xRoadCenter * s
       );
+
+      // Statik mimari hiyerarşide CPU matrix recalculation yükünü sıfırla:
+      clone.updateMatrixWorld(true);
+      clone.traverse(ch => {
+        if (ch.isMesh) {
+          ch.matrixAutoUpdate = false;
+        }
+      });
 
       blockGroup.add(clone);
       blockGroup.position.set(0, 0, zPos);
@@ -538,11 +548,11 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 3D Şehir Bloklarını Akıcı Kaydır (750m devasa sonsuz döngü)
+    // 3D Şehir Bloklarını Akıcı Kaydır (500m kesintisiz sonsuz döngü)
     const loopLen = this.cityLoopLength || 124.4835;
-    const numBlocks = this.cityBlocks.length || 6;
+    const numBlocks = this.cityBlocks.length || 4;
     const wrapDistance = loopLen * numBlocks;
-    const minZ = -loopLen * 4.0;
+    const minZ = -loopLen * 3.0;
 
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;
