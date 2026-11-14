@@ -415,7 +415,14 @@ function connectToTikTok(targetUsername) {
       if (isLocateRequest) {
         handleLocateUser(u.uniqueId, u.nickname, u.avatar);
       } else if (comment.includes('katıl') || comment.includes('katil') || comment.includes('join')) {
-        handleUserJoin(u.uniqueId, u.nickname, u.avatar);
+        const existing = gameState.users[u.uniqueId];
+        if (!existing) {
+          broadcast('EVENT_USER_NOT_IN_CONVOY', {
+            uniqueId: u.uniqueId,
+            nickname: u.nickname,
+            message: `🚗 @${u.nickname} konvoyda yer almak için ekrana çift tıkla (beğen), takip et veya hediye gönder!`
+          });
+        }
       } else if (comment.includes('korna') || comment.includes('düt')) {
         handleHonk(u.uniqueId, u.nickname);
       }
@@ -429,11 +436,11 @@ function connectToTikTok(targetUsername) {
       handleUserLikes(u.uniqueId, u.nickname, u.avatar, count);
     });
 
-    // Takip eden izleyiciler de otomatik konvoya katılır
+    // Takip eden izleyiciler otomatik konvoya katılır
     liveClient.on('follow', data => {
       const u = extractTikTokUser(data);
       console.log(`[TIKTOK FOLLOW] @${u.uniqueId} (${u.nickname}) takip etti! Konvoya katılıyor!`);
-      handleUserJoin(u.uniqueId, u.nickname, u.avatar);
+      handleUserFollow(u.uniqueId, u.nickname, u.avatar);
     });
 
     // Canlı yayını paylaşan izleyici anında en öne fırlar
@@ -477,10 +484,10 @@ function connectToTikTok(targetUsername) {
       handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, deltaCount, data.giftId);
     });
 
-    // Yeni izleyici odaya katıldığında da konvoy ve avatar listesini güncelle
-    liveClient.on('member', data => {
-      const u = extractTikTokUser(data);
-      handleUserJoin(u.uniqueId, u.nickname, u.avatar);
+    // KESİN KURAL: Yayına sadece girenler (spectator) doğrudan konvoya ALINMAZ!
+    // Konvoya girmek için şart: Beğeni atmak, takip etmek veya hediye göndermek!
+    liveClient.on('member', () => {
+      // Spectator katılımında araç spawn edilmez!
     });
 
   } catch (err) {
@@ -517,9 +524,38 @@ function handleUserJoin(uniqueId, nickname, avatar, vehicleType = 'car') {
   });
 }
 
+// Takip eden izleyiciler için özel katılım fonksiyonu
+function handleUserFollow(uniqueId, nickname, avatar) {
+  uniqueId = String(uniqueId || '').trim();
+  if (!uniqueId || uniqueId === 'undefined') {
+    uniqueId = 'izleyici_' + Math.floor(Math.random() * 90000 + 10000);
+  }
+  if (!nickname || nickname === 'undefined') {
+    nickname = 'Konvoycu_' + uniqueId.slice(-4);
+  }
+
+  const isNew = !gameState.users[uniqueId];
+  const user = getOrCreateConvoyUser(uniqueId, nickname, avatar, 'car');
+  user.isFollowing = true;
+  user.points = (user.points || 0) + 50;
+  user.lastActive = Date.now();
+  saveState();
+
+  const sorted = getSortedConvoy();
+  const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+
+  broadcast('EVENT_CONVOY_JOIN', {
+    user,
+    rankIdx: Math.max(0, rankIdx),
+    sortedConvoy: sorted,
+    isNew,
+    message: `❤️🔔 @${user.nickname} YAYINI TAKİP EDEREK KONVOYA KATILDI!`
+  });
+}
+
 function handleHonk(uniqueId, nickname) {
   let user = gameState.users[uniqueId];
-  if (!user) user = getOrCreateConvoyUser(uniqueId, nickname);
+  if (!user) return; // Sadece konvoydaki araçlar korna çalabilir!
   gameState.stats.totalHonks++;
   broadcast('EVENT_HONK', {
     user,
@@ -529,7 +565,7 @@ function handleHonk(uniqueId, nickname) {
 
 function handleSelektor(uniqueId, nickname) {
   let user = gameState.users[uniqueId];
-  if (!user) user = getOrCreateConvoyUser(uniqueId, nickname);
+  if (!user) return; // Sadece konvoydaki araçlar selektör yakabilir!
   broadcast('EVENT_SELEKTOR', {
     user,
     message: `💡⚡ ${user.nickname} SELEKTÖR ÇAKTI! YOL İSTİYOR!`
@@ -748,7 +784,7 @@ function handleLocateUser(uniqueId, nickname = '', avatar = '') {
     broadcast('EVENT_USER_NOT_IN_CONVOY', {
       uniqueId,
       nickname: nickname || 'Misafir',
-      message: `🚗 @${nickname || 'Misafir'} henüz konvoyda değilsin! Katılmak için yayını beğen veya hediye gönder!`
+      message: `🚗 @${nickname || 'Misafir'} henüz konvoyda değilsin! Katılmak için yayını beğen, takip et veya hediye gönder!`
     });
     return;
   }
@@ -1060,6 +1096,7 @@ app.post('/api/simulate', (req, res) => {
 
   switch (type) {
     case 'join': handleUserJoin(uId, nick, avatar); break;
+    case 'follow': handleUserFollow(uId, nick, avatar); break;
     case 'honk': handleHonk(uId, nick); break;
     case 'selektor':
     case 'highbeam':
