@@ -506,6 +506,7 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
 
   const prevLikes = user.likesSent || 0;
   user.likesSent = prevLikes + count;
+  user.points = (user.points || 0) + count;
   gameState.stats.totalLikes += count;
   user.lastActive = Date.now();
   saveState();
@@ -517,6 +518,7 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
   broadcast('EVENT_CONVOY_JOIN', {
     user,
     rankIdx: Math.max(0, rankIdx),
+    sortedConvoy: sorted,
     isNew,
     count,
     message: isNew
@@ -765,8 +767,17 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
 
 function getSortedConvoy() {
   return Object.values(gameState.users).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    // Eşit puanda katılım sırası ve ID ile tam kararlı sıralama (şeritlerin anlamsızca takas edilmesini engeller)
+    // 1. En çok beğenen en öne geçer (likesSent)
+    const likesB = b.likesSent || 0;
+    const likesA = a.likesSent || 0;
+    if (likesB !== likesA) return likesB - likesA;
+
+    // 2. Eşitlikte genel puan (hediyeler vb.)
+    const ptsB = b.points || 0;
+    const ptsA = a.points || 0;
+    if (ptsB !== ptsA) return ptsB - ptsA;
+
+    // 3. Eşitlikte katılım zamanı ve ID ile kararlı sıralama
     return (a.joinedAt || 0) - (b.joinedAt || 0) || String(a.uniqueId).localeCompare(String(b.uniqueId));
   });
 }

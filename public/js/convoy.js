@@ -245,7 +245,6 @@ class ConvoyManager {
   updateCarLabel(user, cObj, rankIdx) {
     if (!cObj || !cObj.labelEl) return;
     const isLead = rankIdx === 0;
-    const carName = cObj.carMesh?.userData?.carName || user.carName || 'Araç';
     const isMotor = cObj.isMotor;
     const fallbackSeed = encodeURIComponent(user.uniqueId || 'guest');
     const avatarUrl = user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${fallbackSeed}`;
@@ -259,10 +258,6 @@ class ConvoyManager {
             ${isLead ? '<span class="plate-crown">👑</span>' : ''}
           </div>
           <div class="plate-nick-tag">${user.nickname || 'Misafir'}</div>
-          <div class="plate-sub-badge ${isLead ? 'badge-lead-sub' : (isMotor ? 'badge-motor-sub' : 'badge-car-sub')}">
-            ${isMotor ? '🏍️' : '🚗'} ${carName} &bull; ${user.points || 1}p
-          </div>
-          <div class="plate-pin"></div>
         </div>
       `;
       return;
@@ -272,7 +267,7 @@ class ConvoyManager {
     const targetClass = `user-plate-card ${isLead ? 'plate-lead' : (isMotor ? 'plate-motor' : 'plate-car')}`;
     if (card.className !== targetClass) card.className = targetClass;
 
-    // Avatar görselini gereksiz DOM yok etmelerine izin vermeden güncelle
+    // Avatar görselini güncelle
     const imgEl = card.querySelector('.plate-avatar-img');
     if (imgEl && imgEl.getAttribute('data-src') !== avatarUrl) {
       imgEl.setAttribute('data-src', avatarUrl);
@@ -292,14 +287,6 @@ class ConvoyManager {
     const nickEl = card.querySelector('.plate-nick-tag');
     if (nickEl && nickEl.textContent !== (user.nickname || 'Misafir')) {
       nickEl.textContent = user.nickname || 'Misafir';
-    }
-
-    // Alt rozet
-    const subBadge = card.querySelector('.plate-sub-badge');
-    if (subBadge) {
-      const targetSubClass = `plate-sub-badge ${isLead ? 'badge-lead-sub' : (isMotor ? 'badge-motor-sub' : 'badge-car-sub')}`;
-      if (subBadge.className !== targetSubClass) subBadge.className = targetSubClass;
-      subBadge.innerHTML = `${isMotor ? '🏍️' : '🚗'} ${carName} &bull; ${user.points || 1}p`;
     }
   }
 
@@ -958,7 +945,7 @@ class ConvoyManager {
     this.updateLabels();
   }
 
-  // 3D Etiketleri ve Araç LOD / Mesafe Kırpması
+  // 3D Etiketleri ve Araç LOD / Mesafe Kırpması (Kernel Düzeyi Titreşimsiz ve Tavanına Çakılı)
   updateLabels() {
     const camera = this.camera;
     // Sıfır DOM Reflow (Layout Thrashing önleyici önbellek)
@@ -966,20 +953,23 @@ class ConvoyManager {
     const h = this.viewportH;
     const tempV = this.tempV;
 
-    // Gelin Arabası Bordo Plakası (Tavanın ve sunroof'un üstünde)
+    // Gelin Arabası Bordo Plakası (Tam Tavanın Üstüne Sabit)
     if (this.leadCar && this.leadLabelEl) {
-      tempV.set(this.leadCar.position.x, this.leadCar.position.y + 1.95, this.leadCar.position.z - 0.35);
+      tempV.set(this.leadCar.position.x, this.leadCar.position.y + 1.42, this.leadCar.position.z);
       tempV.project(camera);
       if (tempV.z > 1 || tempV.z < -1) {
         this.leadLabelEl.style.display = 'none';
       } else {
-        this.leadLabelEl.style.display = 'flex';
         const lx = (tempV.x * 0.5 + 0.5) * w;
         const ly = (-tempV.y * 0.5 + 0.5) * h;
         const lDist = camera.position.distanceTo(this.leadCar.position);
-        // Yakın açıda (<=16m) sabit 0.95x; uzak açılarda yumuşakça küçülür
-        const lScale = lDist <= 16.0 ? 0.95 : Math.max(0.32, Math.min(0.95, Math.pow(16.0 / lDist, 0.70)));
-        this.leadLabelEl.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0) scale(${lScale.toFixed(2)}) translate(-50%, -100%)`;
+        if (lDist > 65) {
+          this.leadLabelEl.style.display = 'none';
+        } else {
+          this.leadLabelEl.style.display = 'flex';
+          const lScale = Math.max(0.40, Math.min(0.95, 16.0 / Math.max(16.0, lDist)));
+          this.leadLabelEl.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0) scale(${lScale.toFixed(2)}) translate(-50%, -100%)`;
+        }
       }
     }
 
@@ -998,33 +988,41 @@ class ConvoyManager {
         return;
       }
 
-      // Her kamera açısında aracın tam tavanı/kaskı üstünde sabit hizalanmış sinematik 3D pozisyon
-      const labelHeight = cObj.isMotor ? 2.35 : 2.10;
-      const labelZ = carPos.z + (cObj.isMotor ? -0.15 : -0.40);
-      tempV.set(carPos.x, carPos.y + labelHeight, labelZ);
+      // Her kamera açısında aracın tam tavan sacına / kaska sıfır temas eden koordinat
+      const labelHeight = cObj.isMotor ? 1.55 : 1.42;
+      tempV.set(carPos.x, carPos.y + labelHeight, carPos.z);
       tempV.project(camera);
 
       if (tempV.z > 1 || tempV.z < -1) {
         cObj.labelEl.style.display = 'none';
-      } else {
-        cObj.labelEl.style.display = 'flex';
-        const sx = (tempV.x * 0.5 + 0.5) * w;
-        const sy = (-tempV.y * 0.5 + 0.5) * h;
-        const dist = camera.position.distanceTo(carPos);
-        // Dinamik Perspektif Ölçeklendirme:
-        // Yakın açılarda (dist <= 18m) 1.0x tam boyutunda kalır;
-        // Kamera uzaklaştıkça araçları kapatmayacak şekilde yumuşakça küçülür (0.28x sınırına kadar)
-        const baseDist = 18.0;
-        const scale = dist <= baseDist
-          ? 1.0
-          : Math.max(0.32, Math.min(1.05, Math.pow(baseDist / dist, 0.78)));
-        const opacity = dist > 140 ? Math.max(0, 1 - (dist - 140) / 50) : 1;
-        // Öndeki aracın etiketi arkadaki aracın etiketini ezsin (Z derinlik hiyerarşisi)
-        const zIndex = Math.max(1, Math.min(999, Math.round(500 + carPos.z * 2)));
-        cObj.labelEl.style.zIndex = zIndex;
-        cObj.labelEl.style.opacity = opacity.toFixed(2);
-        cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) scale(${scale.toFixed(2)}) translate(-50%, -100%)`;
+        return;
       }
+
+      const dist = camera.position.distanceTo(carPos);
+
+      // KERNEL CLUTTER SHIELD: 48 metreden uzaktaki araçların etiketleri gizlenir
+      // Böylece 30 aracın etiketi ekranda birbirine girip çöp yığını oluşturmaz!
+      if (dist > 50) {
+        cObj.labelEl.style.display = 'none';
+        return;
+      }
+
+      cObj.labelEl.style.display = 'flex';
+      const sx = (tempV.x * 0.5 + 0.5) * w;
+      const sy = (-tempV.y * 0.5 + 0.5) * h;
+
+      // Doğrusal 3D Perspektif Küçülme (Araçla 1:1 orantılı küçülür, havada devasa kalmaz)
+      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.35, 1.0);
+      
+      // 32 metreden sonra yumuşakça sönümlenir (fade-out)
+      const opacity = dist > 32 ? Math.max(0, 1 - (dist - 32) / 16) : 1;
+
+      // Öndeki aracın etiketi arkadaki aracın etiketinin üstünde kalır (Derinlik Z-index)
+      const zIndex = Math.max(1, Math.min(999, Math.round(500 + carPos.z * 5)));
+      
+      cObj.labelEl.style.zIndex = zIndex;
+      cObj.labelEl.style.opacity = opacity.toFixed(2);
+      cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) scale(${scale.toFixed(2)}) translate(-50%, -100%)`;
     });
   }
 }

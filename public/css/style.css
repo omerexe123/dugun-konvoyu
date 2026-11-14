@@ -454,7 +454,7 @@ body {
 }
 
 /* -------------------------------------------------------------
-   KULLANICI PROFİL KARTI (Arabanın Hemen Üstünde Sabitlenmiş)
+   KULLANICI PROFİL KARTI (Arabanın Tavanına Sabitlenmiş)
    Daire içinde profil resmi + Hemen altında isim
    ------------------------------------------------------------- */
 .user-plate-card {
@@ -466,15 +466,15 @@ body {
   will-change: transform;
 }
 
-/* 1. Yuvarlak Profil Avatarı (Yarı Yarıya Büyütülmüş, Canlı ve Net) */
+/* 1. Yuvarlak Profil Avatarı (Kompakt, Kristal Netlikte) */
 .plate-avatar-wrap {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   padding: 2px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(148, 163, 184, 0.7));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -493,9 +493,9 @@ body {
 /* Lider Taç Rozeti */
 .plate-crown {
   position: absolute;
-  top: -9px;
-  right: -6px;
-  font-size: 15px;
+  top: -8px;
+  right: -5px;
+  font-size: 14px;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
   z-index: 2;
 }
@@ -503,70 +503,54 @@ body {
 /* Kategoriye Göre Glow Çemberleri */
 .plate-lead .plate-avatar-wrap {
   background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.6);
 }
 
 .plate-motor .plate-avatar-wrap {
   background: linear-gradient(135deg, #38bdf8, #0284c7, #2563eb);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.85), inset 0 0 4px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.9), inset 0 0 3px rgba(255, 255, 255, 0.5);
 }
 
 .plate-car .plate-avatar-wrap {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(148, 163, 184, 0.75));
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.55), inset 0 0 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6), inset 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
-/* 2. Dairenin Hemen Altında Kullanıcı İsmi (Yarı Yarıya Büyütülmüş ve Kristal Netlikte) */
+/* 2. Dairenin Hemen Altında Kullanıcı İsmi (Kompakt ve Okunaklı) */
 .plate-nick-tag {
-  background: rgba(15, 23, 42, 0.82);
+  background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(6px);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  padding: 2.5px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 95px;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
   line-height: 1.15;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
 .plate-lead .plate-nick-tag {
   color: #fef08a;
-  border-color: rgba(251, 191, 36, 0.5);
+  border-color: rgba(251, 191, 36, 0.6);
 }
 
 .plate-motor .plate-nick-tag {
   color: #e0f2fe;
-  border-color: rgba(56, 189, 248, 0.5);
+  border-color: rgba(56, 189, 248, 0.6);
 }
 
-/* 3. Araç & Puan Bilgisi Rozeti */
-.plate-sub-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1.5px 6px;
-  border-radius: 9999px;
-  margin-top: 2px;
-  white-space: nowrap;
-  background: rgba(0, 0, 0, 0.75);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  line-height: 1.15;
-}
-
-.badge-lead-sub {
-  color: #fde047;
-}
-
-.badge-motor-sub {
-  color: #7dd3fc;
+/* 3. Eski Hantal Rozet Gizlendi (Kullanıcı Talebi: Sadece Profil ve Kullanıcı Adı) */
+.plate-sub-badge,
+.plate-pin {
+  display: none !important;
 }
 
 /* 4. Tavan Temas Pini (Tam Arabanın Üstüne Sabitleyen İğne) */

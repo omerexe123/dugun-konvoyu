@@ -500,7 +500,11 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_CONVOY_JOIN':
-        convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? Object.keys(convoy.convoyCars).length);
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? Object.keys(convoy.convoyCars).length);
+        }
         if (payload.isNew) {
           convoy.showBanner(payload.message, 'banner-join', 3500);
         }
