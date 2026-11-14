@@ -929,8 +929,10 @@ app.post('/api/simulate', (req, res) => {
 });
 
 // -------------------------------------------------------------
-// WebSocket
+// WebSocket & Çoklu İstemci Ses Koordinasyonu (OBS vs Tarayıcı)
 // -------------------------------------------------------------
+let activeAudioClientId = null;
+
 wss.on('connection', ws => {
   const sortedConvoy = getSortedConvoy();
   ws.send(JSON.stringify({
@@ -940,14 +942,30 @@ wss.on('connection', ws => {
       liveStatus,
       sortedConvoy,
       carTiers: CAR_TIERS,
-      motorTiers: MOTOR_TIERS
+      motorTiers: MOTOR_TIERS,
+      activeAudioClientId
     }
   }));
 
   ws.on('message', raw => {
     try {
       const msg = JSON.parse(raw);
-      if (msg.type === 'CONNECT_TIKTOK') {
+      if (msg.type === 'CLAIM_AUDIO_LEADER') {
+        activeAudioClientId = msg.clientId;
+        // Diğer tüm istemcilere (OBS veya diğer sekmelere) anında susturma emri ver
+        wss.clients.forEach(client => {
+          if (client !== ws && client.readyState === 1) {
+            client.send(JSON.stringify({
+              type: 'MUTEX_STOP_AUDIO',
+              payload: { activeClientId: msg.clientId }
+            }));
+          }
+        });
+      } else if (msg.type === 'RELEASE_AUDIO_LEADER') {
+        if (activeAudioClientId === msg.clientId) {
+          activeAudioClientId = null;
+        }
+      } else if (msg.type === 'CONNECT_TIKTOK') {
         connectToTikTok(msg.username);
       } else if (msg.type === 'DISCONNECT_TIKTOK') {
         if (liveClient) {

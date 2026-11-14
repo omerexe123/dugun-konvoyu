@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
   // Retina ve 4K ekranlarda jaggies/pixelation olmadan kristal netlik & 60 FPS kilit performans:
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -437,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${protocol}//${window.location.host}`);
+    window.__convoyWs = ws;
 
     ws.onopen = () => {
       console.log('[WS] Düğün konvoyu sunucusuna bağlandı!');
@@ -479,6 +480,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTiktokStatus(payload.liveStatus);
         if (payload.gameState?.battle) updateBattleHUD(payload.gameState.battle);
         if (payload.gameState?.milestone) updateMilestoneHUD(payload.gameState.milestone);
+        if (payload.activeAudioClientId && audio) {
+          audio.handleRemoteAudioStop(payload.activeAudioClientId);
+        }
+        break;
+
+      case 'MUTEX_STOP_AUDIO':
+        if (audio && payload.activeClientId) {
+          audio.handleRemoteAudioStop(payload.activeClientId);
+        }
         break;
 
       case 'EVENT_BATTLE_UPDATE':

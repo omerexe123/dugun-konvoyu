@@ -128,17 +128,23 @@ const CarFactory = {
       if (/object_(158|133|167)/i.test(ch.name || '')) {
         glitchNodes.push(ch);
       }
+      // Honda CB Twister 300 GLTF rest pose hatasını düzelt:
+      // Arka tekerlek/maşa düğümünün (Traseira_299) yamuk rest quaternion'ını (0,0,0.92,0.37) sıfırla:
+      if (/traseira/i.test(ch.name || '')) {
+        ch.quaternion.set(0, 0, 0, 1);
+        ch.rotation.set(0, 0, 0);
+      }
     });
     glitchNodes.forEach(ch => {
       ch.visible = false;
       if (ch.parent) ch.parent.remove(ch);
     });
 
-    // Gerçekçi 3D Gölgeleri Aktifleştir
+    // Gerçekçi 3D Gölgeleri Aktifleştir (Araçlar yola gölge düşürür, gereksiz self-shadowing kaldırıldı)
     clone.traverse(ch => {
       if (ch.isMesh) {
         ch.castShadow = true;
-        ch.receiveShadow = true;
+        ch.receiveShadow = false;
       }
     });
 

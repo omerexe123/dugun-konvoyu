@@ -554,30 +554,30 @@ class ConvoyManager {
       let targetCamPos, targetLookAt;
       const sideOffset = fPos.x >= 0 ? 3.2 : -3.2;
 
-      if (p < 0.38) {
-        // 1. Aşama: Ön-Çapraz Karşılama - Kamera önde düşük açıda bekler, araba kameraya doğru akar
-        const subP = p / 0.38;
-        const camZ = fPos.z + 12.0 - subP * 4.0;
-        const camY = 2.4 + Math.sin(subP * Math.PI) * 0.40;
+      if (p < 0.40) {
+        // 1. Aşama: Ön-Çapraz Takip - Kamera hafif yanda ve arkada, araca ve yola doğru odaklı
+        const subP = p / 0.40;
+        const camZ = fPos.z + 14.0 - subP * 4.0;
+        const camY = 2.8 + Math.sin(subP * Math.PI) * 0.50;
         const camX = THREE.MathUtils.clamp(fPos.x + sideOffset, -4.5, 4.5);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 0.95, fPos.z - 3.0);
-      } else if (p < 0.72) {
-        // 2. Aşama: Önünden Geçiş (The Iconic Hero Flyby) - Araba kameranın hemen önünden süzülerek geçer
-        const subP = (p - 0.38) / 0.34;
-        const camZ = fPos.z + 8.0 - subP * 20.0;
-        const camY = 2.2 + subP * 0.85;
-        const camX = THREE.MathUtils.clamp(fPos.x + THREE.MathUtils.lerp(sideOffset, sideOffset * 0.65, subP), -4.5, 4.5);
+        targetLookAt = new THREE.Vector3(fPos.x * 0.7, fPos.y + 1.1, fPos.z - 8.0);
+      } else if (p < 0.75) {
+        // 2. Aşama: Dinamik Yan Takip (Hero Side-Action Shot) - Asla arkadaki boş gökyüzüne bakmaz!
+        const subP = (p - 0.40) / 0.35;
+        const camZ = fPos.z + 9.0 - subP * 3.0;
+        const camY = 2.6 + Math.sin(subP * Math.PI) * 0.6;
+        const camX = THREE.MathUtils.clamp(fPos.x + THREE.MathUtils.lerp(sideOffset * 1.2, sideOffset * 0.8, subP), -4.8, 4.8);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 1.0, fPos.z + 1.2);
+        targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 1.0, fPos.z - 12.0);
       } else {
-        // 3. Aşama: Arkadan Takip - Araç öne geçmiş, arkasından sinematik spor takip
-        const subP = (p - 0.72) / 0.28;
-        const camZ = fPos.z - 11.0 - subP * 3.5;
-        const camY = 2.8 + subP * 1.3;
-        const camX = THREE.MathUtils.clamp(fPos.x * 0.6 + Math.sin(subP * Math.PI) * 1.4, -4.5, 4.5);
+        // 3. Aşama: Spor Arkadan Takip - Kesintisiz otoyol ve şehir silüetine doğru akıcı takip
+        const subP = (p - 0.75) / 0.25;
+        const camZ = fPos.z + 12.5 + subP * 2.0;
+        const camY = 3.2 + subP * 0.8;
+        const camX = THREE.MathUtils.clamp(fPos.x * 0.5 + Math.sin(subP * Math.PI) * 1.2, -4.2, 4.2);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 1.15, fPos.z + 8.5);
+        targetLookAt = new THREE.Vector3(fPos.x * 0.3, fPos.y + 1.1, fPos.z - 18.0);
       }
 
       this.currentCamPos.lerp(targetCamPos, 0.055);
@@ -1026,9 +1026,10 @@ class ConvoyManager {
 
       const dist = camera.position.distanceTo(carPos);
 
-      // KERNEL CLUTTER SHIELD: 70 metreden uzaktaki araçların etiketleri gizlenir
-      // Böylece uzak ufuktaki araçlar ekranı çöp yığınına çevirmez
-      if (dist > 70) {
+      // KERNEL CLUTTER SHIELD:
+      // 1. 42 metreden uzaktaki araçların etiketleri gizlenir (Önden çekimde 20 etiketin üst üste binip çöp yığını oluşturmasını %100 engeller).
+      // 2. Yalnızca kameraya en yakın ve en net araçların isimleri gösterilir.
+      if (dist > 42) {
         cObj.labelEl.style.display = 'none';
         return;
       }
@@ -1038,13 +1039,13 @@ class ConvoyManager {
       const sy = (-tempV.y * 0.5 + 0.5) * h;
 
       // Doğrusal 3D Perspektif Küçülme (Araçla 1:1 orantılı küçülür, havada devasa kalmaz)
-      const scale = THREE.MathUtils.clamp(18.0 / Math.max(18.0, dist), 0.32, 1.0);
+      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.35, 1.0);
       
-      // 45 metreden sonra yumuşakça sönümlenir (fade-out)
-      const opacity = dist > 45 ? Math.max(0, 1 - (dist - 45) / 22) : 1;
+      // 28 metreden sonra yumuşakça sönümlenir (fade-out)
+      const opacity = dist > 28 ? Math.max(0, 1 - (dist - 28) / 14) : 1;
 
-      // Öndeki aracın etiketi arkadaki aracın etiketinin üstünde kalır (Derinlik Z-index)
-      const zIndex = Math.max(1, Math.min(999, Math.round(500 + carPos.z * 5)));
+      // Dinamik Z-Index: Kameraya daha YAKIN olan aracın etiketi her zaman en üstte kalır!
+      const zIndex = Math.max(1, Math.min(999, Math.round(1000 - dist * 10)));
       
       cObj.labelEl.style.zIndex = zIndex;
       cObj.labelEl.style.opacity = opacity.toFixed(2);

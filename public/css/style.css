@@ -234,7 +234,7 @@ body {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 22px; /* Hediyeler arasındaki mesafe ferahça artırıldı */
+  gap: 24px; /* Hediyeler arasındaki mesafe ferahça artırıldı */
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
@@ -252,8 +252,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  width: 58px;
-  min-height: 52px;
+  width: 74px;
+  min-height: 68px;
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -287,9 +287,9 @@ body {
 }
 
 .gift-badge-icon {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,16 +299,16 @@ body {
 }
 
 .gift-badge-icon.gift-badge-heart {
-  font-size: 34px;
-  line-height: 44px;
+  font-size: 44px;
+  line-height: 56px;
 }
 
 .gift-badge-title {
   position: relative;
   z-index: 2;
-  margin-top: -13px; /* İkonun alt kısmını kapatacak şekilde tam üstüne biner */
-  font-size: 11px;
-  font-weight: 800;
+  margin-top: -16px; /* İkonun alt kısmını kapatacak şekilde tam üstüne biner */
+  font-size: 13px;
+  font-weight: 900;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Arial Black", sans-serif;
   color: #ffffff;
   text-align: center;
@@ -317,7 +317,7 @@ body {
   text-transform: uppercase;
   white-space: normal;
   width: 100%;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 2px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
 
@@ -1106,31 +1106,31 @@ body.obs-mode #canvas-container {
   }
 
   .hud-gift-legend {
-    gap: 12px;
+    gap: 14px;
     padding: 2px 6px;
   }
 
   .gift-badge-item {
-    width: 50px;
-    min-height: 44px;
+    width: 62px;
+    min-height: 56px;
     padding: 0;
     margin: 0;
   }
 
   .gift-badge-icon {
-    min-width: 36px !important;
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 26px !important;
-    line-height: 36px !important;
+    min-width: 46px !important;
+    width: 46px !important;
+    height: 46px !important;
+    font-size: 34px !important;
+    line-height: 46px !important;
   }
 
   .gift-badge-title {
-    font-size: 9.5px !important;
-    font-weight: 800 !important;
-    margin-top: -11px !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    margin-top: -13px !important;
     line-height: 1.05 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
   }
 
   .hud-now-playing {
@@ -1284,26 +1284,26 @@ body.obs-mode #canvas-container {
   }
 
   .hud-gift-legend {
-    gap: 16px;
+    gap: 18px;
     padding: 2px 8px;
   }
 
   .gift-badge-item {
-    width: 54px;
-    min-height: 48px;
+    width: 68px;
+    min-height: 62px;
     padding: 0;
     margin: 0;
   }
 
   .gift-badge-icon {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
   }
 
   .gift-badge-title {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
-    margin-top: -12px;
+    margin-top: -14px;
   }
 }

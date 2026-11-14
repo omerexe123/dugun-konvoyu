@@ -40,7 +40,7 @@ class HighwayEngine {
   // -------------------------------------------------------------
   initRoad() {
     // 1. Sonsuz Derin Zemin Tabanı (Ufuk boşluklarını engeller)
-    const groundGeo = new THREE.PlaneGeometry(1600, 1600);
+    const groundGeo = new THREE.PlaneGeometry(2400, 2400);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x181e28,
@@ -48,12 +48,12 @@ class HighwayEngine {
       metalness: 0.05
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -0.05;
+    groundMesh.position.set(0, -0.05, -200);
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
     // 2. Bulvar Altı Kesintisiz Asfalt Şeridi (Blok geçişlerinde 1 milimetre dahi mavi boşluk/delik oluşmasını engeller)
-    const roadRunwayGeo = new THREE.PlaneGeometry(28.0, 1600);
+    const roadRunwayGeo = new THREE.PlaneGeometry(32.0, 2400);
     roadRunwayGeo.rotateX(-Math.PI / 2);
     const roadRunwayMat = new THREE.MeshStandardMaterial({
       color: 0x181e28, // Asfalt ile birebir aynı koyu renk (asla mavi zemin görünmez)
@@ -61,7 +61,7 @@ class HighwayEngine {
       metalness: 0.05
     });
     const roadRunway = new THREE.Mesh(roadRunwayGeo, roadRunwayMat);
-    roadRunway.position.set(0, -0.015, -180);
+    roadRunway.position.set(0, -0.015, -200);
     roadRunway.receiveShadow = true;
     this.scene.add(roadRunway);
   }
@@ -157,14 +157,13 @@ class HighwayEngine {
 
     this.cityLoopLength = blockLength;
 
-    // 6 Blok ile 750 metrelik kesintisiz devasa bulvar (Ufukta veya yüksek açıda ASLA yol kesilmez, delik oluşmaz)
+    // 5 Blok ile 625 metrelik kesintisiz bulvar (Sis sınırı 360m'yi tam kapsar, boşluk bırakmaz ve 60 FPS kilitler)
     const blockZPositions = [
-      blockLength * 1.5,
-      blockLength * 0.5,
-      -blockLength * 0.5,
-      -blockLength * 1.5,
-      -blockLength * 2.5,
-      -blockLength * 3.5
+      blockLength * 1.0,
+      0,
+      -blockLength * 1.0,
+      -blockLength * 2.0,
+      -blockLength * 3.0
     ];
 
     // Eski bloklar varsa temizle
@@ -575,11 +574,11 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 3D Şehir Bloklarını Akıcı Kaydır (750m kesintisiz sonsuz döngü)
+    // 3D Şehir Bloklarını Akıcı Kaydır (625m kesintisiz sonsuz döngü)
     const loopLen = this.cityLoopLength || 124.4835;
-    const numBlocks = this.cityBlocks.length || 6;
+    const numBlocks = this.cityBlocks.length || 5;
     const wrapDistance = loopLen * numBlocks;
-    const minZ = -loopLen * 4.5;
+    const minZ = -loopLen * 3.5;
 
     this.cityBlocks.forEach(block => {
       block.position.z -= moveDist;

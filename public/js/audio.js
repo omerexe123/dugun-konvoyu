@@ -446,13 +446,26 @@ class ConvoyAudioEngine {
   }
 
   _claimMasterPlayback() {
+    this.isRemoteMuted = false;
     try {
       localStorage.setItem('convoy_music_master_tab', this.tabId);
       localStorage.setItem('convoy_music_master_time', Date.now().toString());
       if (this.tabChannel) {
         this.tabChannel.postMessage({ type: 'CLAIM_MASTER_PLAYBACK', tabId: this.tabId });
       }
+      if (window.__convoyWs && window.__convoyWs.readyState === 1) {
+        window.__convoyWs.send(JSON.stringify({ type: 'CLAIM_AUDIO_LEADER', clientId: this.tabId }));
+      }
     } catch (e) {}
+  }
+
+  handleRemoteAudioStop(activeClientId) {
+    if (activeClientId && activeClientId !== this.tabId) {
+      console.log('[ConvoyAudio] Uzak istemci (OBS veya başka sekme) müzik çalıyor. Çift müzik önleme kalkanı devreye girdi.');
+      this.isRemoteMuted = true;
+      this.pauseMusic(false);
+      this.updateNowPlayingUI();
+    }
   }
 
   _setupMusicEvents() {
@@ -684,7 +697,11 @@ class ConvoyAudioEngine {
     if (panCat) panCat.textContent = track ? track.category : '';
     if (panTitle) panTitle.textContent = track ? track.title : '';
     if (panBtn) {
-      panBtn.innerHTML = this.musicPlaying && !this.muted ? '⏸️ Müzik Durdur' : '▶️ Müzik Başlat';
+      if (this.isRemoteMuted) {
+        panBtn.innerHTML = '🔇 Diğer İstemcide Çalıyor (Susturuldu)';
+      } else {
+        panBtn.innerHTML = this.musicPlaying && !this.muted ? '⏸️ Müzik Durdur' : '▶️ Müzik Başlat';
+      }
     }
     if (sel && sel.value !== String(this.currentTrackIndex)) {
       sel.value = this.currentTrackIndex;
