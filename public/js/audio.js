@@ -25,13 +25,28 @@ class ConvoyAudioEngine {
       selektor: 'audio/sfx/selektor_real.mp3'
     };
 
-    // Müzik Çalar
+    // Müzik Çalar (Kernel Seviyesi Tekil Çalma Korumalı)
     this.musicAudio = new Audio();
     this.musicAudio.preload = 'auto';
     this.musicAudio.volume = this.musicVolume;
     this.musicPlaying = false;
     this.currentTrackIndex = 0;
     this.playlist = [];
+    this._switchingTrack = false;
+    this._lastTrackSwitchTime = 0;
+    this._errorRetryTimer = null;
+
+    // Çoklu Sekme ve OBS Ses Çakışmasını Engelleyen Master Mutex
+    this.tabId = 'tab_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+    this.tabChannel = null;
+    this._initCrossTabSync();
+
+    // URL Parametreleri (OBS veya Sessiz Mod: ?nomusic=1 veya ?mute=1)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('nomusic') === '1' || urlParams.get('mute') === '1') {
+      this.muted = true;
+      this.musicAudio.volume = 0;
+    }
 
     // Varsayılan Çalma Listesi (JSON yüklenene kadar veya offline yedek)
     this.defaultPlaylist = [
@@ -69,7 +84,6 @@ class ConvoyAudioEngine {
     window.addEventListener('touchstart', unlockAudio);
 
     // OBS / Yayın Modu: OBS Browser Source içinde insan tıklaması olmayacağı için doğrudan ses motorunu tetikle
-    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('obs') === '1' || urlParams.get('autoplay') === '1') {
       const tryAutoStart = () => {
         this.init();
@@ -400,7 +414,47 @@ class ConvoyAudioEngine {
     } catch (e) {}
   }
 
-  // --- ARKA PLAN MÜZİK MOTORU (DÜĞÜN / POP / PİYASA ÇALMA LİSTESİ) ---
+  // --- ARKA PLAN MÜZİK MOTORU (TEKİL MASTER & ÇOKLU SEKME KORUMALI) ---
+
+  // Çoklu sekme ve pencere senkronizasyonu: Aynı anda yalnızca 1 sekme müzik çalabilir
+  _initCrossTabSync() {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.tabChannel = new BroadcastChannel('convoy_audio_master');
+        this.tabChannel.onmessage = (event) => {
+          if (!event || !event.data) return;
+          if (event.data.type === 'CLAIM_MASTER_PLAYBACK' && event.data.tabId !== this.tabId) {
+            // Başka bir sekme müzik başlattı: Bu sekmedeki müziği anında ve sessizce durdur!
+            if (this.musicPlaying) {
+              console.log('[ConvoyAudio] Başka bir sekme aktifleşti. Çift müzik çalmasını önlemek için bu sekme susturuldu.');
+              this.pauseMusic(false);
+            }
+          }
+        };
+      } catch (e) {}
+    }
+
+    // BroadcastChannel olmayan tarayıcılar için LocalStorage Fallback
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'convoy_music_master_tab') {
+        if (e.newValue && e.newValue !== this.tabId && this.musicPlaying) {
+          console.log('[ConvoyAudio] LocalStorage uyarısı: Başka sekme aktif, müzik durduruluyor.');
+          this.pauseMusic(false);
+        }
+      }
+    });
+  }
+
+  _claimMasterPlayback() {
+    try {
+      localStorage.setItem('convoy_music_master_tab', this.tabId);
+      localStorage.setItem('convoy_music_master_time', Date.now().toString());
+      if (this.tabChannel) {
+        this.tabChannel.postMessage({ type: 'CLAIM_MASTER_PLAYBACK', tabId: this.tabId });
+      }
+    } catch (e) {}
+  }
+
   _setupMusicEvents() {
     this.musicAudio.addEventListener('ended', () => {
       // Şarkı bittiğinde sonraki parçaya yumuşak geçiş
@@ -408,8 +462,17 @@ class ConvoyAudioEngine {
     });
 
     this.musicAudio.addEventListener('error', (e) => {
-      console.warn('[ConvoyAudio] Müzik parçası çalınamadı, sonrakine geçiliyor:', e);
-      setTimeout(() => this.nextTrack(), 1500);
+      // Şarkı geçişinde iptal (MEDIA_ERR_ABORTED - code 1) olduysa sonsuz döngü ve çakışma başlatma
+      if (this.musicAudio.error && this.musicAudio.error.code === 1) {
+        return;
+      }
+      console.warn('[ConvoyAudio] Müzik parçası çalınamadı:', e);
+      clearTimeout(this._errorRetryTimer);
+      this._errorRetryTimer = setTimeout(() => {
+        if (this.musicPlaying) {
+          this.nextTrack();
+        }
+      }, 2500);
     });
   }
 
@@ -448,24 +511,56 @@ class ConvoyAudioEngine {
 
   playTrack(index) {
     if (!this.playlist || this.playlist.length === 0) return;
+
+    // Hızlı tıklama ve ardışık tetiklemeleri engelleyen 250ms atomik kilit
+    const now = Date.now();
+    if (this._switchingTrack && (now - this._lastTrackSwitchTime < 250)) {
+      return;
+    }
+    this._switchingTrack = true;
+    this._lastTrackSwitchTime = now;
+
     this.currentTrackIndex = (index + this.playlist.length) % this.playlist.length;
     const track = this.playlist[this.currentTrackIndex];
 
+    clearTimeout(this._errorRetryTimer);
+
+    // Eski çalan parçayı anında ve temiz şekilde durdur
+    try {
+      this.musicAudio.pause();
+    } catch (e) {}
+
+    // Diğer tüm açık sekmelere "ben çalıyorum, siz susun" emri ver
+    this._claimMasterPlayback();
+
     this.musicAudio.src = track.url;
+    this.musicAudio.currentTime = 0;
     this.musicAudio.volume = this.muted ? 0 : this.musicVolume;
+
+    // unlockAudio gibi arayüz olaylarının aynı anda startMusic çağırmasını engellemek için durumu hemen true yap
+    this.musicPlaying = true;
+    this.updateNowPlayingUI();
 
     const playPromise = this.musicAudio.play();
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
+          this._switchingTrack = false;
           this.musicPlaying = true;
           this.updateNowPlayingUI();
         })
         .catch(err => {
+          this._switchingTrack = false;
+          // Eğer şarkı kullanıcı veya yeni parça seçimi yüzünden kesildiyse (AbortError), normal karşıla
+          if (err.name === 'AbortError') {
+            return;
+          }
           console.log('[ConvoyAudio] Müzik otomatik başlatma kullanıcı etkileşimi bekliyor:', err.message);
           this.musicPlaying = false;
           this.updateNowPlayingUI();
         });
+    } else {
+      this._switchingTrack = false;
     }
   }
 
@@ -474,6 +569,7 @@ class ConvoyAudioEngine {
     if (!this.musicAudio.src && this.playlist.length > 0) {
       this.playTrack(this.currentTrackIndex);
     } else {
+      this._claimMasterPlayback();
       this.musicAudio.play().then(() => {
         this.musicPlaying = true;
         this.updateNowPlayingUI();
@@ -481,15 +577,26 @@ class ConvoyAudioEngine {
     }
   }
 
-  pauseMusic() {
-    this.musicAudio.pause();
+  pauseMusic(broadcast = true) {
+    clearTimeout(this._errorRetryTimer);
+    try {
+      this.musicAudio.pause();
+    } catch (e) {}
     this.musicPlaying = false;
     this.updateNowPlayingUI();
+
+    if (broadcast) {
+      try {
+        if (localStorage.getItem('convoy_music_master_tab') === this.tabId) {
+          localStorage.removeItem('convoy_music_master_tab');
+        }
+      } catch (e) {}
+    }
   }
 
   toggleMusic() {
     if (this.musicPlaying) {
-      this.pauseMusic();
+      this.pauseMusic(true);
     } else {
       this.startMusic();
     }
@@ -502,6 +609,15 @@ class ConvoyAudioEngine {
 
   prevTrack() {
     this.playTrack(this.currentTrackIndex - 1);
+  }
+
+  // Düğün Kutlama / Halay Özel Teması (İkinci bir ses kanalı açmaz, doğrudan tekil motoru halaya yönlendirir)
+  startDavulZurnaTheme(durationMs = 15000) {
+    if (this.muted) return;
+    const halayIndex = this.playlist.findIndex(t => t.id === 'dugun_halay_potpori');
+    if (halayIndex !== -1 && this.currentTrackIndex !== halayIndex) {
+      this.playTrack(halayIndex);
+    }
   }
 
   setMusicVolume(vol) {
@@ -527,6 +643,23 @@ class ConvoyAudioEngine {
     }
     this.updateNowPlayingUI();
     return this.muted;
+  }
+
+  destroy() {
+    this.pauseMusic(false);
+    clearTimeout(this._errorRetryTimer);
+    if (this.musicAudio) {
+      this.musicAudio.onended = null;
+      this.musicAudio.onerror = null;
+      this.musicAudio.src = '';
+      try { this.musicAudio.load(); } catch (e) {}
+    }
+    if (this.tabChannel) {
+      try { this.tabChannel.close(); } catch (e) {}
+    }
+    if (this.ctx && this.ctx.state !== 'closed') {
+      try { this.ctx.close(); } catch (e) {}
+    }
   }
 
   updateNowPlayingUI() {
@@ -559,4 +692,8 @@ class ConvoyAudioEngine {
   }
 }
 
+// Eski arka plan örneği varsa kesin olarak temizle (Bellek sızıntısı ve hayalet ses engeli)
+if (window.convoyAudio && typeof window.convoyAudio.destroy === 'function') {
+  window.convoyAudio.destroy();
+}
 window.convoyAudio = new ConvoyAudioEngine();
