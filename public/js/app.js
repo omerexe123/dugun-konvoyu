@@ -712,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
     camSelect.addEventListener('change', (e) => {
       const mode = parseInt(e.target.value, 10);
       convoy.cameraMode = mode;
-      controls.enabled = (mode === 7);
+      controls.enabled = (mode === 9);
     });
   }
 
@@ -869,10 +869,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (e.key >= '0' && e.key <= '7') {
+    if (e.key >= '0' && e.key <= '9') {
       const mode = parseInt(e.key, 10);
       convoy.cameraMode = mode;
-      controls.enabled = (mode === 7);
+      controls.enabled = (mode === 9);
       if (camSelect) camSelect.value = String(mode);
     } else if (e.key === 'f' || e.key === 'F') {
       const u = getSimUser();
