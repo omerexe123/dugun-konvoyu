@@ -76,7 +76,11 @@ class ConvoyAudioEngine {
       { id: 'pop_cevapsiz_cinlama', title: 'Aleyna Tilki & Emrah Karaduman - Cevapsız Çınlama', category: 'Türkçe Pop', url: 'audio/music/pop_cevapsiz_cinlama.mp3' },
       { id: 'piyasa_ceza_yerli_plaka', title: 'Ceza - Yerli Plaka (Cadde & Drift)', category: 'Piyasa / Hip-Hop', url: 'audio/music/piyasa_ceza_yerli_plaka.mp3' },
       { id: 'piyasa_ben_fero_demet', title: 'Ben Fero - Demet Akalın (Piyasa Trap)', category: 'Piyasa / Trap', url: 'audio/music/piyasa_ben_fero_demet.mp3' },
-      { id: 'piyasa_drift_phonk', title: 'Kontraa - Aggressive Drift Phonk', category: 'Piyasa / Drift Phonk', url: 'audio/music/piyasa_drift_phonk.mp3' }
+      { id: 'piyasa_drift_phonk', title: 'Kontraa - Aggressive Drift Phonk', category: 'Piyasa / Drift Phonk', url: 'audio/music/piyasa_drift_phonk.mp3' },
+      { id: 'tiktok_lvbel_c5_dacia', title: 'Lvbel C5 - DACIA (Arabada Gaz Pedal)', category: 'TikTok Viral / Piyasa', url: 'audio/music/tiktok_lvbel_c5_dacia.mp3' },
+      { id: 'tiktok_blok3_vur', title: 'BLOK3 - VUR (TikTok Trend)', category: 'TikTok Viral / Trap', url: 'audio/music/tiktok_blok3_vur.mp3' },
+      { id: 'tiktok_ali_cabbar', title: 'Emir Can İğrek - Ali Cabbar', category: 'TikTok Viral / Düğün', url: 'audio/music/tiktok_ali_cabbar.mp3' },
+      { id: 'tiktok_montagem_diamante', title: 'Montagem Diamante Rosa - Drift Phonk', category: 'TikTok Viral / Phonk', url: 'audio/music/tiktok_montagem_diamante.mp3' }
     ];
 
     this.initDone = false;

@@ -70,5 +70,29 @@
     "url": "audio/music/piyasa_drift_phonk.mp3",
     "title": "Kontraa - Aggressive Drift Phonk",
     "category": "Piyasa / Drift Phonk"
+  },
+  {
+    "id": "tiktok_lvbel_c5_dacia",
+    "url": "audio/music/tiktok_lvbel_c5_dacia.mp3",
+    "title": "Lvbel C5 - DACIA (Arabada Gaz Pedal)",
+    "category": "TikTok Viral / Piyasa"
+  },
+  {
+    "id": "tiktok_blok3_vur",
+    "url": "audio/music/tiktok_blok3_vur.mp3",
+    "title": "BLOK3 - VUR (TikTok Trend)",
+    "category": "TikTok Viral / Trap"
+  },
+  {
+    "id": "tiktok_ali_cabbar",
+    "url": "audio/music/tiktok_ali_cabbar.mp3",
+    "title": "Emir Can İğrek - Ali Cabbar",
+    "category": "TikTok Viral / Düğün"
+  },
+  {
+    "id": "tiktok_montagem_diamante",
+    "url": "audio/music/tiktok_montagem_diamante.mp3",
+    "title": "Montagem Diamante Rosa - Drift Phonk",
+    "category": "TikTok Viral / Phonk"
   }
 ]
