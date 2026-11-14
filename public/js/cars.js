@@ -532,10 +532,6 @@ const CarFactory = {
       xOffsets: mOffsets
     });
 
-    // Motor Alt Neon Paketi (Hediye ile açılabilir, tek tekere kalkınca şasiyle beraber kalkar)
-    const motorNeon = this.attachUnderglow(bikeContainer, { isMotor: true });
-    group.userData.neon = motorNeon;
-
     wheeliePivot.add(bikeContainer);
     group.add(wheeliePivot);
 
@@ -806,71 +802,8 @@ const CarFactory = {
   // ===========================================================
   // 5. ASFALTI AYDINLATAN ALT NEON (UNDERGLOW) SİSTEMİ
   // ===========================================================
-  attachUnderglow(group, options = {}) {
-    const isMotor = options.isMotor || false;
-    // Arabadayken alta neon özelliği tamamen uçuruldu; yalnızca motosikletler için çalışır:
-    if (!isMotor) return null;
-
-    const width = 0.70;
-    const length = 1.45;
-    const yGround = 0.025;
-
-    const neonContainer = new THREE.Group();
-
-    // Gerçekçi yumuşak neon ışık dokusu (Soft Radial Glow Canvas Texture - Sıfır keskin sınır)
-    if (!CarFactory.neonTexture && typeof document !== 'undefined') {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d');
-      // Dış kenara ulaşmadan önce şeffaflığı %100 sıfırla, asfaltta asla dikdörtgen sınır kalmaz
-      const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 115);
-      grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-      grad.addColorStop(0.30, 'rgba(255, 255, 255, 0.70)');
-      grad.addColorStop(0.60, 'rgba(255, 255, 255, 0.28)');
-      grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.05)');
-      grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 256, 256);
-      CarFactory.neonTexture = new THREE.CanvasTexture(canvas);
-    }
-
-    // Asfalta Yayılan Difüze Yumuşak Neon Parıltısı (Zemine paralel, Additive Blending)
-    const poolGeom = new THREE.PlaneGeometry(width, length);
-    poolGeom.rotateX(-Math.PI / 2);
-
-    const poolMat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff,
-      map: CarFactory.neonTexture || null,
-      transparent: true,
-      opacity: isMotor ? 0.55 : 0.75,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-    const poolMesh = new THREE.Mesh(poolGeom, poolMat);
-    poolMesh.position.y = yGround;
-    neonContainer.add(poolMesh);
-
-    neonContainer.visible = false;
-    group.add(neonContainer);
-
-    const neonState = {
-      container: neonContainer,
-      poolMat,
-      enabled: false,
-      color: 0x00f0ff,
-      setColor(hex) {
-        this.color = typeof hex === 'string' ? parseInt(hex.replace('#', '0x'), 16) : hex;
-        poolMat.color.setHex(this.color);
-      },
-      setEnabled(flag) {
-        this.enabled = !!flag;
-        neonContainer.visible = this.enabled;
-      }
-    };
-
-    group.userData.neon = neonState;
-    return neonState;
+  attachUnderglow() {
+    return null;
   }
 };
 

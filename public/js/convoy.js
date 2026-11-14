@@ -77,27 +77,8 @@ class ConvoyManager {
     this.currentCamLook.set(0, 1.2, 6.0);
   }
 
-  // Araç / Motosiklet Alt Neon Paketini Aktifleştir
-  setCarNeon(uniqueId, colorHex = '#00f0ff') {
-    const cObj = this.convoyCars[uniqueId];
-    if (!cObj) return;
-
-    // Arabadayken alta neon özelliği tamamen engellendi (yalnızca motosiklette çalışır)
-    if (!cObj.isMotor) return;
-
-    let neon = cObj.group.userData.neon;
-    if (!neon) {
-      cObj.group.traverse(ch => {
-        if (ch.userData && ch.userData.neon) neon = ch.userData.neon;
-      });
-    }
-
-    if (neon) {
-      neon.setColor(colorHex);
-      neon.setEnabled(true);
-      if (cObj.user) cObj.user.neonColor = colorHex;
-    }
-  }
+  // Alt Neon özelliği tamamen kaldırıldı
+  setCarNeon() {}
 
   // Tek bir GLB modeli indiğinde sadece o modeli kullanan aracı yenile (Donmayı sıfırlayan cerrahi güncelleme)
   refreshCarMesh(cObj) {
@@ -107,7 +88,6 @@ class ConvoyManager {
     while (cObj.group.children.length > 0) {
       cObj.group.remove(cObj.group.children[0]);
     }
-    cObj.group.userData.neon = null;
     cObj.carMesh = null;
     let newVehicle = isMotorcycle ? CarFactory.createMotorcycle(targetTier) : CarFactory.createCarByTier(targetTier);
     cObj.group.add(newVehicle);
@@ -115,8 +95,6 @@ class ConvoyManager {
     cObj.tier = targetTier;
     cObj.group.userData.wheels = newVehicle.userData.wheels || [];
     cObj.group.userData.wheeliePivot = newVehicle.userData.wheeliePivot || null;
-    if (newVehicle.userData.neon) cObj.group.userData.neon = newVehicle.userData.neon;
-    if (cObj.user.neonColor) this.setCarNeon(cObj.user.uniqueId, cObj.user.neonColor);
     this.updateCarLabel(cObj.user, cObj, cObj.rankIdx);
   }
 
@@ -233,11 +211,10 @@ class ConvoyManager {
     // Araç Tipi veya Kademesi Değişmişse Yenile
     const needsRebuild = (cObj.isMotor !== isMotorcycle) || (cObj.tier !== targetTier);
     if (needsRebuild) {
-      // Eski araba/motor ve alt neon kalıntılarını tamamen temizle (asfaltta askıda neon kalmasını %100 engeller)
+      // Eski araba/motor kalıntılarını temizle
       while (cObj.group.children.length > 0) {
         cObj.group.remove(cObj.group.children[0]);
       }
-      cObj.group.userData.neon = null;
       cObj.carMesh = null;
 
       let newVehicle;
@@ -255,9 +232,6 @@ class ConvoyManager {
       cObj.carMesh = newVehicle;
       cObj.group.userData.wheels = newVehicle.userData.wheels || [];
       cObj.group.userData.wheeliePivot = newVehicle.userData.wheeliePivot || null;
-      if (newVehicle.userData.neon) {
-        cObj.group.userData.neon = newVehicle.userData.neon;
-      }
     }
 
     // Hedef Konumu Belirle
@@ -266,9 +240,6 @@ class ConvoyManager {
     }
 
     this.updateCarLabel(user, cObj, rankIdx);
-    if (user.neonColor) {
-      this.setCarNeon(user.uniqueId, user.neonColor);
-    }
     this.activeCarsList = Object.values(this.convoyCars);
   }
 

@@ -639,22 +639,17 @@ function handleBecomeGroom(uniqueId, nickname, avatar, giftLabel = 'Hat and Must
   });
 }
 
-function handleEquipNeon(uniqueId, nickname, avatar, color = null) {
+function handleTikTokGift(uniqueId, nickname, avatar) {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
-  upgradeUserVehicle(user, 'TikTok Neon', 1);
-  const neonPalette = ['#00f0ff', '#ff007f', '#39ff14', '#8b5cf6', '#ffd700'];
-  const chosenColor = color || neonPalette[Math.floor(Math.random() * neonPalette.length)];
-  user.neonColor = chosenColor;
-  user.points += 20;
+  addPointsToConvoyUser(user, 20, 'TikTok Hediyesi');
   saveState();
 
-  broadcast('EVENT_NEON_EQUIP', {
+  broadcast('EVENT_GIFT_GENERIC', {
     uniqueId,
-    neonColor: chosenColor,
     user,
     giftIcon: 'images/gifts/tiktok.webp',
-    message: `🌈✨ ${nickname} TIKTOK HEDİYESİYLE ŞASİ ALTI ÖZEL NEON TAKTI!`
+    message: `🎵✨ ${nickname} TIKTOK HEDİYESİ (1🪙) İLE KONVOYDA İLERLİYOR!`
   });
 }
 
@@ -701,9 +696,9 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 4. KURAL: TIKTOK (1🪙) -> ŞASİ ALTI NEON IŞIK TAKMA
-  if (gName.includes('tiktok') || gName.includes('sunglasses') || gName.includes('gözlük') || gName.includes('neon')) {
-    handleEquipNeon(uniqueId, nickname, avatar);
+  // 4. KURAL: TIKTOK (1🪙) -> KONVOY PUANI
+  if (gName.includes('tiktok') || gName.includes('sunglasses') || gName.includes('gözlük')) {
+    handleTikTokGift(uniqueId, nickname, avatar);
     return;
   }
 
@@ -900,7 +895,7 @@ app.post('/api/simulate', (req, res) => {
       handleBecomeGroom(uId, nick, avatar);
       break;
     case 'neon':
-      handleEquipNeon(uId, nick, avatar, '#00f0ff');
+      handleTikTokGift(uId, nick, avatar);
       break;
     default:
       return res.status(400).json({ error: 'Bilinmeyen simülasyon tipi' });

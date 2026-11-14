@@ -613,11 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_NEON_EQUIP':
-        const targetId = payload.uniqueId || payload.user?.uniqueId;
-        if (targetId) convoy.triggerGiftFocus(targetId, 6500);
-        convoy.setCarNeon(targetId, payload.neonColor);
-        convoy.showBanner(payload.message, 'banner-neon', 4500, payload.giftIcon || 'images/gifts/sunglasses.webp');
-        addLog(payload.message, 'log-neon');
+        // Alt neon özelliği tamamen kaldırıldı
         break;
 
       case 'CONVOY_RESET':
