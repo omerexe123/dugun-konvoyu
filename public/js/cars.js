@@ -208,8 +208,17 @@ const CarFactory = {
     const wheels = [];
     if (!container) return wheels;
 
-    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|wheel_rf|wheel_lr|wheel_rr|roda|jerez|alloy|dianteir|traseir|pneu).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
-    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy|holder/i;
+    // KERNEL GÜVENLİK SHIELD - MOTOSİKLETLER İÇİN TAM KORUMA:
+    // Motosiklet GLTF modellerinde (Honda Twister, Ninja ZX-6R, Yamaha R1, Pulsar) maşa, zincir ve tekerlekler
+    // eğik açılı pivotlara ve yekpare süspansiyona bağlıdır.
+    // Düğüm döndürmek Honda Twister'daki gibi arka tekerin 45 derece yana fırlamasına sebep olur!
+    // Bu nedenle motosiklet modellerinin orijinal geometrisi %100 kilitlenir:
+    if (isMotor) {
+      return wheels;
+    }
+
+    const wheelNodeRegex = /^(wheel-(front|back|rear)(-(left|right))?|(wheel|tire|rim|belvedere|w206_wheel|w206_tire|inmx7m60i_wheel|m_m_tire|polo17wheel|tire_01a|wheel_lf|wheel_rf|wheel_lr|wheel_rr|roda|jerez|alloy|pneu).*(fl|fr|rl|rr)?.*|(front|rear)[_\s](wheel|rim).*)$/i;
+    const blacklistRegex = /seat|brake|tub|wiper|light|steering|steer|dash|panel|gauge|dial|door|bumper|skirt|\btrim\b|caliper|exhaust|mirror|glass|holder|bracket|arm|cover|fender|guard|wire|plate|cyl|dummy|holder|dianteir|traseir|fork|suspens|swingarm|frame|chassi|balanc/i;
     // Bütün arabayı veya birden fazla tekeri içeren üst montaj kök grupları (bunları atla)
     const rootAssemblyRegex = /^(wheels?(\.\d+)?(_\d+)?|belvedere_18_\d+|jerez_19_\d+|alloy_15_\d+|scene.*)$/i;
 

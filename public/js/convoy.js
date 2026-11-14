@@ -938,6 +938,9 @@ class ConvoyManager {
     }
 
     carsList.forEach(cObj => {
+      // Motosikletlerde (isMotor) statik model geometrisini %100 koru; tekerlek/maşa kırılmasını engelle
+      if (cObj.isMotor) return;
+
       let carWheels = cObj.group.userData.wheels;
       if (!carWheels && cObj.carMesh) carWheels = cObj.carMesh.userData.wheels;
       if (!carWheels) {
