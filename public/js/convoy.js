@@ -491,9 +491,14 @@ class ConvoyManager {
   focusCar(uniqueId, durationMs = 5000) {
     this.focusedCarId = uniqueId;
     this.focusUntil = Date.now() + durationMs;
+    this.giftFocusStart = Date.now();
+    this.giftFocusDuration = durationMs;
+    this.giftFocusUntil = Date.now() + durationMs;
     this.idleTimer = 0;
     const cObj = this.convoyCars[uniqueId];
     if (cObj) {
+      cObj.giftFocusStart = Date.now();
+      cObj.giftFocusDuration = durationMs;
       cObj.giftFocusUntil = Date.now() + durationMs;
     }
   }
@@ -541,15 +546,27 @@ class ConvoyManager {
 
     const leadZ = this.leadCar ? this.leadCar.position.z : 0;
     const now = Date.now();
+
+    // Failsafe: currentCamPos veya currentCamLook NaN olursa anında varsayılana sıfırla (Mavi ekran koruması)
+    if (!Number.isFinite(this.currentCamPos.x) || !Number.isFinite(this.currentCamPos.y) || !Number.isFinite(this.currentCamPos.z)) {
+      this.currentCamPos.set(0, 6.2, leadZ + 18.5);
+    }
+    if (!Number.isFinite(this.currentCamLook.x) || !Number.isFinite(this.currentCamLook.y) || !Number.isFinite(this.currentCamLook.z)) {
+      this.currentCamLook.set(0, 1.3, leadZ - 12.0);
+    }
+
     const isFocusActive = this.focusedCarId && (now < this.focusUntil) && this.convoyCars[this.focusedCarId];
 
     // HEDİYE SİNEMATİK ODAĞI: Araba kameranın önünden yavaşça ve pürüzsüzce geçip gider!
     if (isFocusActive) {
       const fObj = this.convoyCars[this.focusedCarId];
       const fPos = fObj.group.position;
-      const totalDur = this.giftFocusDuration || 7000;
-      const elapsed = Math.max(0, now - (this.giftFocusStart || (this.giftFocusUntil - totalDur)));
-      const p = Math.min(1.0, elapsed / totalDur); // 0.0 -> 1.0
+      const totalDur = Math.max(1000, Number(this.giftFocusDuration) || 6500);
+      const startTime = Number(this.giftFocusStart) || (this.focusUntil - totalDur) || (now - 500);
+      const elapsed = Math.max(0, now - startTime);
+      let p = elapsed / totalDur;
+      if (!Number.isFinite(p) || Number.isNaN(p)) p = 0.5;
+      p = THREE.MathUtils.clamp(p, 0.0, 1.0);
 
       let targetCamPos, targetLookAt;
       const sideOffset = fPos.x >= 0 ? 3.2 : -3.2;
@@ -580,8 +597,12 @@ class ConvoyManager {
         targetLookAt = new THREE.Vector3(fPos.x * 0.3, fPos.y + 1.1, fPos.z - 18.0);
       }
 
-      this.currentCamPos.lerp(targetCamPos, 0.055);
-      this.currentCamLook.lerp(targetLookAt, 0.065);
+      if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z)) {
+        this.currentCamPos.lerp(targetCamPos, 0.055);
+      }
+      if (Number.isFinite(targetLookAt.x) && Number.isFinite(targetLookAt.y) && Number.isFinite(targetLookAt.z)) {
+        this.currentCamLook.lerp(targetLookAt, 0.065);
+      }
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);

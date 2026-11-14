@@ -65,6 +65,7 @@ const CarFactory = {
     this._loader = new THREE.GLTFLoader();
     this.getModel(this.GELIN_MODEL);
     if (this.TIER_MAP[1]) this.getModel(this.TIER_MAP[1].file);
+    if (this.MOTOR_MAP[1]) this.getModel(this.MOTOR_MAP[1].file);
   },
 
   // Cache'te varsa döndürür, yoksa yüklemeyi sıraya alır ve undefined döner

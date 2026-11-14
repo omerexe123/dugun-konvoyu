@@ -425,11 +425,11 @@ function connectToTikTok(targetUsername) {
       if (data.giftType === 1 && !data.repeatEnd) return;
       const repeatCount = data.repeatCount || 1;
       const diamondCount = (data.diamondCount || 1) * repeatCount;
-      const giftName = data.giftName || 'Hediye';
+      const giftName = data.giftName || data.describe || data.giftDetails?.giftName || 'Hediye';
       const u = extractTikTokUser(data);
 
-      console.log(`[TIKTOK GIFT] @${u.uniqueId} (${u.nickname}) hediye attı: ${giftName} x${repeatCount}`);
-      handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, repeatCount);
+      console.log(`[TIKTOK GIFT] @${u.uniqueId} (${u.nickname}) hediye attı: ${giftName} (id:${data.giftId}) x${repeatCount}`);
+      handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, repeatCount, data.giftId);
     });
 
     // Yeni izleyici odaya katıldığında da konvoy ve avatar listesini güncelle
@@ -656,12 +656,13 @@ function handleTikTokGift(uniqueId, nickname, avatar) {
 }
 
 // Hediye Ayrıştırma Motoru - StreamToEarn.io Türkiye Kataloğu ile Birebir Eşleşme
-function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, repeatCount) {
+function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, repeatCount, giftId = null) {
   let user = gameState.users[uniqueId];
   if (!user) user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
 
   gameState.stats.totalGifts += repeatCount;
-  const gName = (giftName || '').toLowerCase();
+  const gName = (giftName || '').toLowerCase().trim();
+  const sGiftId = String(giftId || '');
 
   // Gelin vs Damat Savaş Puanı & Toplu Düğün Hedefi
   const isBrideSide = gName.includes('perfume') || gName.includes('parfüm') || gName.includes('swan') || gName.includes('kuğu') || gName.includes('rose') || gName.includes('gül') || gName.includes('kalp');
@@ -705,8 +706,10 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   }
 
   // 5. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
-  if (gName.includes('gg') || gName.includes('motor')) {
+  const isGG = gName === 'gg' || gName.includes('gg') || gName.includes('good game') || gName.includes('iyi oyun') || gName.includes('oyun') || gName.includes('motor') || gName.includes('motosiklet') || gName.includes('bike') || sGiftId === '6084' || sGiftId === '5655';
+  if (isGG) {
     switchToMotor(user);
+    saveState();
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
     const sorted = getSortedConvoy();
     const ggRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);

@@ -189,18 +189,8 @@ class HighwayEngine {
         -xRoadCenter * s
       );
 
-      // Statik mimari hiyerarşide CPU matrix recalculation yükünü sıfırla:
-      clone.updateMatrixWorld(true);
-      clone.traverse(ch => {
-        if (ch.isMesh) {
-          ch.matrixAutoUpdate = false;
-        }
-      });
-
       blockGroup.add(clone);
       blockGroup.position.set(0, 0, zPos);
-      blockGroup.updateMatrix();
-      blockGroup.matrixAutoUpdate = false;
 
       this.cityContainer.add(blockGroup);
       this.cityBlocks.push(blockGroup);
