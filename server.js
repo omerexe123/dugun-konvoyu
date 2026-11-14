@@ -186,7 +186,9 @@ function getOrCreateConvoyUser(uniqueId, nickname = '', avatar = '', vehicleType
       motorTier: 1,
       carName: vehicleType === 'motor' ? MOTOR_TIERS[0].name : CAR_TIERS[0].name,
       likesSent: 0,
+      driftCount: 0,
       giftsSent: 0,
+      joinedAt: Date.now(),
       lastActive: Date.now()
     };
     gameState.users[uniqueId] = newUser;
@@ -418,7 +420,7 @@ function connectToTikTok(targetUsername) {
       }
     });
 
-    // Kural: "yayını beğendikçe konvoya katılınsın ve öne geçilsin"
+    // Kural: "yayını beğendikçe konvoya katılınsın" (Beğeni konvoya katar, ancak öne geçmek için drift gerekir)
     liveClient.on('like', data => {
       const u = extractTikTokUser(data);
       const count = Number(data.likeCount || data.count || 1) || 1;
@@ -426,15 +428,45 @@ function connectToTikTok(targetUsername) {
       handleUserLikes(u.uniqueId, u.nickname, u.avatar, count);
     });
 
-    liveClient.on('gift', data => {
-      if (data.giftType === 1 && !data.repeatEnd) return;
-      const repeatCount = data.repeatCount || 1;
-      const diamondCount = (data.diamondCount || 1) * repeatCount;
-      const giftName = data.giftName || data.describe || data.giftDetails?.giftName || 'Hediye';
+    // Takip eden izleyiciler de otomatik konvoya katılır
+    liveClient.on('follow', data => {
       const u = extractTikTokUser(data);
+      console.log(`[TIKTOK FOLLOW] @${u.uniqueId} (${u.nickname}) takip etti! Konvoya katılıyor!`);
+      handleUserJoin(u.uniqueId, u.nickname, u.avatar);
+    });
 
-      console.log(`[TIKTOK GIFT] @${u.uniqueId} (${u.nickname}) hediye attı: ${giftName} (id:${data.giftId}) x${repeatCount}`);
-      handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, repeatCount, data.giftId);
+    // Streak hediyeleri (GG, Gül vb.) kaçırmadan anında işleyen akıllı takip tablosu
+    const activeGiftStreaks = {};
+
+    liveClient.on('gift', data => {
+      const u = extractTikTokUser(data);
+      const giftName = data.giftName || data.describe || data.giftDetails?.giftName || 'Hediye';
+      const streakKey = `${u.uniqueId}_${data.giftId}`;
+      const currentRepeat = Number(data.repeatCount || 1);
+
+      let deltaCount = 1;
+      if (data.giftType === 1) {
+        // Streak tipi hediyelerde (1🪙) her tıklamayı anında işle, repeatEnd beklenip düşürülmesin!
+        const lastCount = activeGiftStreaks[streakKey] || 0;
+        if (currentRepeat > lastCount) {
+          deltaCount = currentRepeat - lastCount;
+          activeGiftStreaks[streakKey] = currentRepeat;
+        } else if (data.repeatEnd) {
+          delete activeGiftStreaks[streakKey];
+          return;
+        } else {
+          deltaCount = 1;
+        }
+        if (data.repeatEnd) {
+          delete activeGiftStreaks[streakKey];
+        }
+      } else {
+        deltaCount = Number(data.repeatCount || 1);
+      }
+
+      const diamondCount = (data.diamondCount || 1) * deltaCount;
+      console.log(`[TIKTOK GIFT] @${u.uniqueId} (${u.nickname}) hediye attı: ${giftName} (id:${data.giftId}) x${deltaCount}`);
+      handleGiftEvent(u.uniqueId, u.nickname, u.avatar, giftName, diamondCount, deltaCount, data.giftId);
     });
 
     // Yeni izleyici odaya katıldığında da konvoy ve avatar listesini güncelle
@@ -735,11 +767,11 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   }
 
   // 5. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
-  const isGG = gName === 'gg' || gName.includes('gg') || gName.includes('good game') || gName.includes('iyi oyun') || gName.includes('oyun') || gName.includes('motor') || gName.includes('motosiklet') || gName.includes('bike') || sGiftId === '6084' || sGiftId === '5655';
+  const isGG = gName === 'gg' || gName.includes('gg') || gName.includes('good game') || gName.includes('game') || gName.includes('kol') || gName.includes('konsol') || gName.includes('gamepad') || gName.includes('iyi oyun') || gName.includes('oyun') || gName.includes('motor') || gName.includes('motosiklet') || gName.includes('bike') || /6084|5655|6083|6085|6086|6104|6105|6106|6107|6108/.test(sGiftId);
   if (isGG) {
     switchToMotor(user);
-    saveState();
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
+    saveState();
     const sorted = getSortedConvoy();
     const ggRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
     broadcast('EVENT_MOTOR_SPAWN', {
@@ -756,8 +788,11 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   if (gName.includes('cake') || gName.includes('pasta') || gName.includes('slice') || gName.includes('fire') || gName.includes('ateş') || gName.includes('çörek') || gName.includes('corek') || gName.includes('burnout') || gName.includes('lastik')) {
     gameState.stats.totalBurnouts = (gameState.stats.totalBurnouts || 0) + 1;
     addPointsToConvoyUser(user, 25 * repeatCount, 'Pasta Dilimi Burnout');
+    saveState();
+    const sorted = getSortedConvoy();
     broadcast('EVENT_BURNOUT', {
       user,
+      sortedConvoy: sorted,
       giftIcon: 'images/gifts/cake_slice.webp',
       message: `💨🔥 ${user.nickname} CAKE SLICE (1🪙) İLE LASTİK YAKIYOR! ASFALTI AĞLATIYOR!`
     });
@@ -769,47 +804,65 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     if (user.vehicleType === 'motor') {
       gameState.stats.totalWheelies = (gameState.stats.totalWheelies || 0) + 1;
       addPointsToConvoyUser(user, 25 * repeatCount, 'Dondurma Tek Teker');
+      saveState();
       broadcast('EVENT_WHEELIE', {
         user,
         giftIcon: 'images/gifts/ice_cream.webp',
         message: `🏍️⚡ ${user.nickname} ICE CREAM CONE (1🪙) İLE MOTOSİKLETİNİ TEK TEKERE KALDIRDI!`
       });
     } else {
-      // Araç motor değilse araba ile drift atsın:
+      // Araç motor değilse araba ile drift atsın ve sollasın:
       gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
+      user.driftCount = (user.driftCount || 0) + repeatCount;
       addPointsToConvoyUser(user, 25 * repeatCount, 'Dondurma Yanlama Drifti');
+      saveState();
+      const sorted = getSortedConvoy();
+      const newRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
       broadcast('EVENT_DRIFT', {
         user,
+        rankIdx: Math.max(0, newRank),
+        sortedConvoy: sorted,
         giftIcon: 'images/gifts/ice_cream.webp',
-        message: `🌹💨 ${user.nickname} DONDURMA (1🪙) İLE YANLIYOR! EFSANE DRİFT!`
+        message: `🌹💨 ${user.nickname} DONDURMA (1🪙) İLE YANLADI VE SOLLADI! (Sıra: #${newRank + 1})`
       });
     }
     return;
   }
 
-  // 8. KURAL: 1x ROSE (GÜL - 1🪙) VE DİĞER TÜM 1 COINLİK HEDİYELER -> UZUN VE EFSANE DRİFT!
+  // 8. KURAL: 1x ROSE (GÜL - 1🪙) VE DİĞER TÜM 1 COINLİK HEDİYELER -> DRİFT AT VE SOLLA GEÇ!
   gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
+  user.driftCount = (user.driftCount || 0) + repeatCount;
   addPointsToConvoyUser(user, 15 * repeatCount, `${giftName} Drifti`);
+  saveState();
+  const sorted = getSortedConvoy();
+  const newRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
   broadcast('EVENT_DRIFT', {
     user,
+    rankIdx: Math.max(0, newRank),
+    sortedConvoy: sorted,
     giftIcon: 'images/gifts/rose.webp',
-    message: `🌹💨 ${user.nickname} ROSE (1🪙) İLE YANLIYOR! EFSANE DRİFT!`
+    message: `🌹💨 ${user.nickname} DRİFT ATTI VE SOLLAYIP GEÇTİ! (Konvoy Sırası: #${newRank + 1})`
   });
 }
 
 function getSortedConvoy() {
   return Object.values(gameState.users).sort((a, b) => {
-    // 1. En çok beğenen en öne geçer (likesSent)
-    const likesB = b.likesSent || 0;
-    const likesA = a.likesSent || 0;
-    if (likesB !== likesA) return likesB - likesA;
+    // 1. En çok drift atan en öne geçer (driftCount - Solla Geç kuralı)
+    const driftB = b.driftCount || 0;
+    const driftA = a.driftCount || 0;
+    if (driftB !== driftA) return driftB - driftA;
 
     // 2. Eşitlikte genel puan (hediyeler vb.)
     const ptsB = b.points || 0;
     const ptsA = a.points || 0;
     if (ptsB !== ptsA) return ptsB - ptsA;
 
-    // 3. Eşitlikte katılım zamanı ve ID ile kararlı sıralama
+    // 3. Eşitlikte beğeni sayısı (Beğenerek katılanlar arasında adil sıra)
+    const likesB = b.likesSent || 0;
+    const likesA = a.likesSent || 0;
+    if (likesB !== likesA) return likesB - likesA;
+
+    // 4. Eşitlikte katılım zamanı ve ID ile kararlı sıralama
     return (a.joinedAt || 0) - (b.joinedAt || 0) || String(a.uniqueId).localeCompare(String(b.uniqueId));
   });
 }

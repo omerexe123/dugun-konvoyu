@@ -592,13 +592,13 @@ class HighwayEngine {
     if (this.groundMesh) this.groundMesh.position.z = camZ;
     if (this.roadRunway) this.roadRunway.position.z = camZ;
 
-    // Şehir blokları kamera nerede olursa olsun [-totalLength * 0.6, +totalLength * 0.4] penceresinde kesintisiz akar
+    // Şehir blokları kamera ekseninde [camZ - 150m, camZ + 846m] penceresinde kesintisiz akar
+    const minZ = camZ - 150.0;
     this.cityBlocks.forEach((block, idx) => {
       const baseOffset = idx * loopLen;
-      const relZ = (baseOffset - this.accumulatedScroll) % totalLength;
-      let worldZ = camZ + ((relZ - camZ) % totalLength);
-      while (worldZ > camZ + totalLength * 0.4) worldZ -= totalLength;
-      while (worldZ < camZ - totalLength * 0.6) worldZ += totalLength;
+      let worldZ = (baseOffset - this.accumulatedScroll) % totalLength;
+      while (worldZ < minZ) worldZ += totalLength;
+      while (worldZ >= minZ + totalLength) worldZ -= totalLength;
       block.position.z = worldZ;
     });
 

@@ -540,8 +540,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(payload.message, 'log-join');
         break;
 
-      // 1. Gül -> Drift Aksiyonu (Hediye Kamera Odağı ve VIP Mesafe)
+      // 1. Gül -> Drift Aksiyonu (Hediye Kamera Odağı, Sıralama Güncellemesi ve Solla Geç)
       case 'EVENT_DRIFT':
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else if (payload.user) {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
+        }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerDrift(payload.user.uniqueId);
         addLog(payload.message, 'log-drift');
@@ -549,6 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 2. Lastik Yakma -> Burnout Aksiyonu
       case 'EVENT_BURNOUT':
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else if (payload.user) {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
+        }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerBurnout(payload.user.uniqueId);
         addLog(payload.message, 'log-burnout');
@@ -568,6 +578,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 4. Motor Ön Kaldırma (Wheelie)
       case 'EVENT_WHEELIE':
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else if (payload.user) {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
+        }
         if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
         convoy.triggerWheelie(payload.user.uniqueId);
         addLog(payload.message, 'log-wheelie');

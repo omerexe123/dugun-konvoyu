@@ -584,20 +584,24 @@ class ConvoyManager {
     }
   }
 
-  // En çok beğeni atan konvoy lideri aracını bulur (Rank 0 / Max Likes)
-  getTopLikerCar() {
+  // En çok drift atan konvoy lideri aracını bulur (Rank 0 / Max Drifts - Solla Geç Lideri)
+  getTopDrifterCar() {
     const cars = this.activeCarsList;
     if (!cars || cars.length === 0) return null;
     let topCar = cars.find(c => c.rankIdx === 0);
     if (!topCar) {
       topCar = cars.slice().sort((a, b) => {
-        const likesB = b.user?.likesSent || 0;
-        const likesA = a.user?.likesSent || 0;
-        if (likesB !== likesA) return likesB - likesA;
+        const driftB = b.user?.driftCount || 0;
+        const driftA = a.user?.driftCount || 0;
+        if (driftB !== driftA) return driftB - driftA;
         return (b.user?.points || 0) - (a.user?.points || 0);
       })[0];
     }
     return topCar || cars[0];
+  }
+
+  getTopLikerCar() {
+    return this.getTopDrifterCar();
   }
 
   updateCamera(dt = 0.016) {
@@ -626,7 +630,7 @@ class ConvoyManager {
     // 1. Öncelik: Hediye Atan
     // 2. Öncelik: "Ben Nerdeyim" Diyen
     // 3. Öncelik: Yeni Katılan
-    // 4. Öncelik (Varsayılan): EN ÇOK BEĞENİ ATAN KİŞİ! (Katılan yoksa gelin arabası)
+    // 4. Öncelik (Varsayılan): EN ÇOK DRİFT ATAN LİDER! (Katılan yoksa gelin arabası)
     // -----------------------------------------------------------------
     if (this.cameraMode === 0) {
       let targetObj = null;
@@ -638,7 +642,7 @@ class ConvoyManager {
       } else if (isJoinActive) {
         targetObj = this.convoyCars[this.joinFocusCarId];
       } else {
-        targetObj = this.getTopLikerCar();
+        targetObj = this.getTopDrifterCar();
       }
 
       let targetPos;
