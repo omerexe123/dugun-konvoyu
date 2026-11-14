@@ -8,9 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Three.js Sahnesi & Kamera (Gündüz Aydınlığı)
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0284c7); // Derin Gökyüzü Mavisi
-  scene.fog = new THREE.Fog(0xbae6fd, 85, 360); // Kristal Netlik (0-85m sıfır sis, ufukta yumuşak geçiş)
+  scene.fog = new THREE.Fog(0xbae6fd, 100, 550); // Kristal Netlik (0-100m sıfır sis, 550m ufukta yumuşak geçiş)
 
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 600);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 1800);
   camera.position.set(0, 11, 24);
 
   const renderer = new THREE.WebGLRenderer({
@@ -512,6 +512,19 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(`💬 <b>${payload.nickname}:</b> ${escapeHtml(payload.comment)}`, 'log-chat');
         break;
 
+      // "Ben Nerdeyim" Konum Bulma
+      case 'EVENT_LOCATE_USER':
+        if (payload.user?.uniqueId) {
+          convoy.triggerLocateCar(payload.user.uniqueId, payload.rankIdx ?? 0, payload.message);
+        }
+        addLog(payload.message, 'log-locate');
+        break;
+
+      case 'EVENT_USER_NOT_IN_CONVOY':
+        convoy.showBanner(payload.message, 'banner-warning', 4500);
+        addLog(payload.message, 'log-warning');
+        break;
+
       case 'EVENT_CONVOY_JOIN':
         if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
           payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
@@ -963,6 +976,9 @@ document.addEventListener('DOMContentLoaded', () => {
           simulate({ type: 'bride', uniqueId: u, nickname: u }); break;
         case 'groom':
           simulate({ type: 'groom', uniqueId: u, nickname: u }); break;
+        case 'locate':
+        case 'findme':
+          simulate({ type: 'locate', uniqueId: u, nickname: u }); break;
       }
     });
   });

@@ -406,7 +406,12 @@ function connectToTikTok(targetUsername) {
 
       broadcast('TIKTOK_CHAT', { uniqueId: u.uniqueId, nickname: u.nickname, comment: data.comment });
 
-      if (comment.includes('katıl') || comment.includes('katil') || comment.includes('join')) {
+      // "Ben Nerdeyim" Komutu Algılayıcı (Kernel Seviyesi Regex)
+      const isLocateRequest = /(nerdeyim|neredeyim|nerde|nerede|nerdeyiz|arabam\s+nerde|arabam\s+nerede|araba\s+nerde|beni\s+göster|beni\s+bul|hangisiyim)/i.test(comment);
+
+      if (isLocateRequest) {
+        handleLocateUser(u.uniqueId, u.nickname, u.avatar);
+      } else if (comment.includes('katıl') || comment.includes('katil') || comment.includes('join')) {
         handleUserJoin(u.uniqueId, u.nickname, u.avatar);
       } else if (comment.includes('korna') || comment.includes('düt')) {
         handleHonk(u.uniqueId, u.nickname);
@@ -652,6 +657,30 @@ function handleTikTokGift(uniqueId, nickname, avatar) {
     user,
     giftIcon: 'images/gifts/tiktok.webp',
     message: `🎵✨ ${nickname} TIKTOK HEDİYESİ (1🪙) İLE KONVOYDA İLERLİYOR!`
+  });
+}
+
+// "Ben Nerdeyim" Komutu: Kullanıcının konvoydaki yerini bulup kamerayı üzerine kilitler
+function handleLocateUser(uniqueId, nickname = '', avatar = '') {
+  let user = gameState.users[uniqueId];
+  if (!user) {
+    broadcast('EVENT_USER_NOT_IN_CONVOY', {
+      uniqueId,
+      nickname: nickname || 'Misafir',
+      message: `🚗 @${nickname || 'Misafir'} henüz konvoyda değilsin! Katılmak için yayını beğen veya hediye gönder!`
+    });
+    return;
+  }
+
+  user.lastActive = Date.now();
+  const sorted = getSortedConvoy();
+  const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+
+  broadcast('EVENT_LOCATE_USER', {
+    user,
+    rankIdx: Math.max(0, rankIdx),
+    sortedConvoy: sorted,
+    message: `🎯 @${user.nickname} İŞTE BURADASIN! (Konvoy Sırası: #${rankIdx + 1})`
   });
 }
 
@@ -923,6 +952,10 @@ app.post('/api/simulate', (req, res) => {
       break;
     case 'neon':
       handleTikTokGift(uId, nick, avatar);
+      break;
+    case 'locate':
+    case 'findme':
+      handleLocateUser(uId, nick, avatar);
       break;
     default:
       return res.status(400).json({ error: 'Bilinmeyen simülasyon tipi' });

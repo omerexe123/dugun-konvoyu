@@ -52,6 +52,7 @@ class HighwayEngine {
     groundMesh.position.set(0, -0.05, 0);
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
+    this.groundMesh = groundMesh;
 
     // 2. Bulvar Altı Kesintisiz Asfalt Şeridi (Blok geçişlerinde 1 milimetre dahi mavi boşluk/delik oluşmasını engeller)
     const roadRunwayGeo = new THREE.PlaneGeometry(36.0, 2400);
@@ -65,6 +66,7 @@ class HighwayEngine {
     roadRunway.position.set(0, -0.015, 0);
     roadRunway.receiveShadow = true;
     this.scene.add(roadRunway);
+    this.roadRunway = roadRunway;
   }
 
   // -------------------------------------------------------------
@@ -158,14 +160,16 @@ class HighwayEngine {
 
     this.cityLoopLength = blockLength;
 
-    // 6 Blok ile 750 metrelik kesintisiz tekil şehir bulvarı (360 derece kesintisiz ufuk)
+    // 8 Blok ile 1000 metrelik kesintisiz şehir bulvarı (Kamerayı her koordinatta dinamik çevreler)
     const blockZPositions = [
+      blockLength * 3.0,
       blockLength * 2.0,
       blockLength * 1.0,
       0,
       -blockLength * 1.0,
       -blockLength * 2.0,
-      -blockLength * 3.0
+      -blockLength * 3.0,
+      -blockLength * 4.0
     ];
 
     // Eski konteyner varsa sahneden temizle
@@ -575,14 +579,28 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // Tek Parça Monolitik Şehir Konteyneri (Sıfır Blok Işınlanması, Sıfır CPU Yeniden Hesaplama)
+    // Gerçek Sonsuz Otoyol Motoru: Şehir blokları ve zemin KAMERA eksenini dinamik takip eder!
     const loopLen = this.cityLoopLength || 124.4835;
-    if (this.cityContainer) {
-      this.cityContainer.position.z -= moveDist;
-      if (this.cityContainer.position.z <= -loopLen) {
-        this.cityContainer.position.z += loopLen;
-      }
-    }
+    const numBlocks = this.cityBlocks.length || 8;
+    const totalLength = loopLen * numBlocks;
+
+    this.accumulatedScroll = (this.accumulatedScroll || 0) + moveDist;
+
+    const camZ = (window.convoy && window.convoy.camera) ? window.convoy.camera.position.z : 0;
+
+    // Asfalt zemin ve runway plakaları kamerayı lockstep takip eder (ASLA zemin delinmez)
+    if (this.groundMesh) this.groundMesh.position.z = camZ;
+    if (this.roadRunway) this.roadRunway.position.z = camZ;
+
+    // Şehir blokları kamera nerede olursa olsun [-totalLength * 0.6, +totalLength * 0.4] penceresinde kesintisiz akar
+    this.cityBlocks.forEach((block, idx) => {
+      const baseOffset = idx * loopLen;
+      const relZ = (baseOffset - this.accumulatedScroll) % totalLength;
+      let worldZ = camZ + ((relZ - camZ) % totalLength);
+      while (worldZ > camZ + totalLength * 0.4) worldZ -= totalLength;
+      while (worldZ < camZ - totalLength * 0.6) worldZ += totalLength;
+      block.position.z = worldZ;
+    });
 
     // 3. Konfeti Salınımı (Kamera eksenini kirletmeden yumuşak süzülme)
     if (this.confettiParticles) {

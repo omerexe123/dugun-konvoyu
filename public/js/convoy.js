@@ -26,6 +26,10 @@ class ConvoyManager {
     this.joinFocusUntil = 0;
     this.joinFocusStart = 0;
     this.joinFocusDuration = 6000;
+    this.locateFocusCarId = null;
+    this.locateFocusUntil = 0;
+    this.locateFocusStart = 0;
+    this.locateFocusDuration = 6500;
     this.currentCamPos = new THREE.Vector3(0, 5.5, 16.0);
     this.currentCamLook = new THREE.Vector3(0, 1.2, 0.0);
 
@@ -541,6 +545,26 @@ class ConvoyManager {
     }
   }
 
+  // "Ben Nerdeyim" Komutu: Kamerayı anında kullanıcının arabasına kilitler, selektör ve korna çalar!
+  triggerLocateCar(uniqueId, rankIdx = 0, customMsg = null) {
+    const cObj = this.convoyCars[uniqueId];
+    if (!cObj) return;
+
+    this.addTrauma(0.25);
+    this.locateFocusCarId = uniqueId;
+    this.locateFocusStart = Date.now();
+    this.locateFocusDuration = 6500;
+    this.locateFocusUntil = Date.now() + 6500;
+
+    const nick = cObj.user.nickname || 'Misafir';
+    const msg = customMsg || `🎯 ${nick} İŞTE BURADASIN! (Sıra: #${rankIdx + 1})`;
+    this.showBanner(msg, 'banner-locate', 5500);
+
+    // Kendi arabasında selektör çak ve korna bas!
+    this.triggerSelektor(uniqueId);
+    if (this.audio) this.audio.playWeddingHorn();
+  }
+
   // Toplu Düğün Hedefi Kutlaması (Havai Fişek & Ekran Sarsıntısı)
   triggerMilestoneCelebration() {
     this.addTrauma(0.75);
@@ -578,7 +602,8 @@ class ConvoyManager {
     }
 
     const isGiftActive = this.giftFocusCarId && (now < this.giftFocusUntil) && this.convoyCars[this.giftFocusCarId];
-    const isJoinActive = !isGiftActive && this.joinFocusCarId && (now < this.joinFocusUntil) && this.convoyCars[this.joinFocusCarId];
+    const isLocateActive = !isGiftActive && this.locateFocusCarId && (now < this.locateFocusUntil) && this.convoyCars[this.locateFocusCarId];
+    const isJoinActive = !isGiftActive && !isLocateActive && this.joinFocusCarId && (now < this.joinFocusUntil) && this.convoyCars[this.joinFocusCarId];
 
     // -----------------------------------------------------------------
     // 1. ÖNCELİK: HEDİYE AKSİYON ODAĞI (En yüksek öncelik - Dinamik kahraman çekimi)
@@ -636,7 +661,39 @@ class ConvoyManager {
     }
 
     // -----------------------------------------------------------------
-    // 2. ÖNCELİK: YENİ KATILAN FLYBY GEÇİŞİ
+    // 2. ÖNCELİK: "BEN NERDEYİM" KONUM BULMA ODAĞI
+    // Kullanıcının arabasına şık bir arka-yan açıyla anında kilitlenir
+    // -----------------------------------------------------------------
+    if (isLocateActive) {
+      const lObj = this.convoyCars[this.locateFocusCarId];
+      const lPos = lObj.group.position;
+      const totalDur = Math.max(1000, Number(this.locateFocusDuration) || 6500);
+      const elapsed = Math.max(0, now - (this.locateFocusStart || (this.locateFocusUntil - totalDur)));
+      const p = Math.min(1.0, elapsed / totalDur);
+
+      const sideX = lPos.x >= 0 ? 2.6 : -2.6;
+      const camZ = lPos.z - 11.5 + Math.sin(p * Math.PI) * 1.5;
+      const camY = 2.8 + Math.sin(p * Math.PI) * 0.4;
+      const camX = THREE.MathUtils.clamp(lPos.x + sideX, -4.5, 4.5);
+
+      const targetCamPos = new THREE.Vector3(camX, camY, camZ);
+      const targetLookAt = new THREE.Vector3(lPos.x * 0.5, lPos.y + 1.15, lPos.z + 16.0);
+
+      if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z)) {
+        this.currentCamPos.lerp(targetCamPos, 0.065);
+      }
+      if (Number.isFinite(targetLookAt.x) && Number.isFinite(targetLookAt.y) && Number.isFinite(targetLookAt.z)) {
+        this.currentCamLook.lerp(targetLookAt, 0.075);
+      }
+
+      this.camera.position.copy(this.currentCamPos);
+      this.camera.lookAt(this.currentCamLook);
+      this.applyCameraShake(dt);
+      return;
+    }
+
+    // -----------------------------------------------------------------
+    // 3. ÖNCELİK: YENİ KATILAN FLYBY GEÇİŞİ
     // Kamera aracın başlangıç noktasının arkasında alçakta sabit bekler,
     // yeni araç hızla kameranın önünden geçip ileriye (konvoydaki yerine) fırlar!
     // -----------------------------------------------------------------
@@ -1112,16 +1169,10 @@ class ConvoyManager {
     this.activeCarsList.forEach(cObj => {
       const carPos = cObj.group.position;
 
-      // 100+ araca kadar kesintisiz akış (-280m derinlik)
-      const isVisibleRange = (carPos.z > -280 && carPos.z < 80);
-      cObj.group.visible = isVisibleRange;
+      // Tüm araçlar 3D sahnesinde her zaman aktiftir (Three.js GPU culling otomatik halleder)
+      cObj.group.visible = true;
 
       if (!cObj.labelEl) return;
-
-      if (!isVisibleRange) {
-        cObj.labelEl.style.display = 'none';
-        return;
-      }
 
       const dist = camera.position.distanceTo(carPos);
 
