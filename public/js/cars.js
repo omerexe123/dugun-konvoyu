@@ -122,6 +122,18 @@ const CarFactory = {
   normalizeModel(rawScene, targetL, isMotor = false, explicitRotY = Math.PI) {
     const clone = rawScene.clone(true);
     
+    // Sketchfab veya GLTF exportlarından kalan devasa (100m+) glitch/outlier poligonları temizle
+    const glitchNodes = [];
+    clone.traverse(ch => {
+      if (/object_(158|133|167)/i.test(ch.name || '')) {
+        glitchNodes.push(ch);
+      }
+    });
+    glitchNodes.forEach(ch => {
+      ch.visible = false;
+      if (ch.parent) ch.parent.remove(ch);
+    });
+
     // Gerçekçi 3D Gölgeleri Aktifleştir
     clone.traverse(ch => {
       if (ch.isMesh) {

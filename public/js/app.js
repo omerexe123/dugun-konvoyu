@@ -470,9 +470,10 @@ document.addEventListener('DOMContentLoaded', () => {
   connectWebSocket();
 
   function handleServerEvent(msg) {
-    const { type, payload } = msg;
+    try {
+      const { type, payload } = msg;
 
-    switch (type) {
+      switch (type) {
       case 'INIT_CONVOY_STATE':
         convoy.syncInitialState(payload);
         updateTiktokStatus(payload.liveStatus);
@@ -621,7 +622,10 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('🗑️ Konvoy sıfırlandı. Sadece Gelin & Damat arabası kaldı.', 'log-sys');
         break;
     }
+  } catch (err) {
+    console.error('[handleServerEvent crash]', err, msg);
   }
+}
 
   function updateBattleHUD(data) {
     const brideFill = document.getElementById('hud-battle-fill-bride');
@@ -1019,11 +1023,15 @@ document.addEventListener('DOMContentLoaded', () => {
       fpsTimer = now;
     }
 
-    dayNight.update(dt);
-    highway.update(dt);
-    convoy.update(dt);
+    try { dayNight.update(dt); } catch (e) { console.error('[dayNight error]', e); }
+    try { highway.update(dt); } catch (e) { console.error('[highway error]', e); }
+    try { convoy.update(dt); } catch (e) { console.error('[convoy error]', e); }
 
-    renderer.render(scene, camera);
+    try {
+      renderer.render(scene, camera);
+    } catch (e) {
+      console.error('[render crash]', e);
+    }
   }
   animate();
 

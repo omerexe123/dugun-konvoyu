@@ -163,13 +163,12 @@ class ConvoyManager {
   spawnOrUpdateCar(user, rankIdx = 0) {
     let cObj = this.convoyCars[user.uniqueId];
 
-    // 3 Şeritli Prestijli ve Geniş Konvoy Dizilimi
-    // Şeritler: 0: Orta Şerit (0m), 1: Sağ Şerit (3.15m), 2: Sol Şerit (-3.15m)
-    const laneOffsetsX = [0, 3.15, -3.15];
+    // 3 Şeritli Prestijli ve Doğal Konvoy Dizilimi
+    // Şeritler: 0: Orta Şerit (0m), 1: Sağ Şerit (3.10m), 2: Sol Şerit (-3.10m)
+    const laneOffsetsX = [0, 3.10, -3.10];
     const targetX = laneOffsetsX[rankIdx % 3];
-    // Artırılmış devasa ferah konvoy mesafesi: Arabalar ve motorlar asla iç içe giremez
-    // Gelin arabası arkasında 26m VIP güvenlik koridoru, sıra başı 26.0m ferah aralık, şerit kademesi 8.5m
-    const targetZ = -26.0 - Math.floor(rankIdx / 3) * 26.0 - (rankIdx % 3) * 8.5;
+    // Gelin arabası arkasında 9.5m VIP güvenlik koridoru, sıra başı 7.5m ferah aralık, şerit kademesi 2.2m
+    const targetZ = -3.5 - Math.floor(rankIdx / 3) * 7.5 - (rankIdx % 3) * 2.2;
 
     const isMotorcycle = user.vehicleType === 'motor';
 
@@ -608,18 +607,18 @@ class ConvoyManager {
     if (this.cameraMode === 0) {
       this.idleTimer += dt;
       const orbitAngle = this.idleTimer * 0.14;
-      const orbitRadius = 21.0 + Math.sin(this.idleTimer * 0.12) * 3.5;
-      const camY = 6.2 + Math.sin(this.idleTimer * 0.16) * 1.4; // 9.5m yerine sinematik 6.2m
+      const orbitRadius = 14.5 + Math.sin(this.idleTimer * 0.12) * 2.5;
+      const camY = 5.4 + Math.sin(this.idleTimer * 0.16) * 1.1;
 
       const targetCamPos = new THREE.Vector3(
-        Math.sin(orbitAngle) * 4.2,
+        Math.sin(orbitAngle) * 3.6,
         camY,
         leadZ + orbitRadius
       );
-      const targetLookAt = new THREE.Vector3(0, 1.25, leadZ - 8.0);
+      const targetLookAt = new THREE.Vector3(0, 1.25, leadZ - 4.5);
 
-      this.currentCamPos.lerp(targetCamPos, 0.035);
-      this.currentCamLook.lerp(targetLookAt, 0.040);
+      this.currentCamPos.lerp(targetCamPos, 0.045);
+      this.currentCamLook.lerp(targetLookAt, 0.050);
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
@@ -715,7 +714,7 @@ class ConvoyManager {
 
       // ACC & Takip Mesafesi (Gelin arabası ve öndeki araçla güvenli mesafe)
       if (this.leadCar && Math.abs(currentX - this.leadCar.position.x) < 2.0) {
-        const MIN_LEAD_DIST = 26.0;
+        const MIN_LEAD_DIST = 8.5;
         if (effectiveTargetZ > this.leadCar.position.z - MIN_LEAD_DIST) {
           effectiveTargetZ = this.leadCar.position.z - MIN_LEAD_DIST;
         }
@@ -729,7 +728,7 @@ class ConvoyManager {
         const lateralDist = Math.abs(currentX - otherX);
 
         if (lateralDist < 1.6 && otherZ > currentZ) {
-          const SAFE_FOLLOW_DIST = 16.0;
+          const SAFE_FOLLOW_DIST = 6.0;
           if (effectiveTargetZ > otherZ - SAFE_FOLLOW_DIST) {
             effectiveTargetZ = otherZ - SAFE_FOLLOW_DIST;
           }

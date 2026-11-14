@@ -845,6 +845,19 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true, message: 'Konvoy sıfırlandı, sadece gelin damat arabası bırakıldı.' });
 });
 
+const recentClientErrors = [];
+app.post('/api/client-error', (req, res) => {
+  const errData = { ...req.body, time: new Date().toISOString() };
+  recentClientErrors.unshift(errData);
+  if (recentClientErrors.length > 50) recentClientErrors.pop();
+  console.error('[CLIENT ERROR LOG]', JSON.stringify(errData));
+  res.json({ ok: true });
+});
+
+app.get('/api/errors', (req, res) => {
+  res.json({ errors: recentClientErrors });
+});
+
 app.post('/api/simulate', (req, res) => {
   const { type, uniqueId, nickname, avatar: reqAvatar, profilePictureUrl, giftName, diamondCount, count } = req.body;
   const uId = uniqueId || 'konvoycu_1';
