@@ -51,6 +51,7 @@ class HighwayEngine {
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
     groundMesh.position.set(0, -0.05, 0);
     groundMesh.receiveShadow = true;
+    groundMesh.frustumCulled = false; // KERNEL GÜVENCESİ: Asla frustum dışı kalıp silinmez
     this.scene.add(groundMesh);
     this.groundMesh = groundMesh;
 
@@ -65,6 +66,7 @@ class HighwayEngine {
     const roadRunway = new THREE.Mesh(roadRunwayGeo, roadRunwayMat);
     roadRunway.position.set(0, -0.015, 0);
     roadRunway.receiveShadow = true;
+    roadRunway.frustumCulled = false; // KERNEL GÜVENCESİ: Asla frustum culling ile gizlenemez
     this.scene.add(roadRunway);
     this.roadRunway = roadRunway;
   }
@@ -118,7 +120,7 @@ class HighwayEngine {
 
         if (ch.isMesh) {
           ch.castShadow = false;
-          ch.frustumCulled = !isRoadOrGround;
+          ch.frustumCulled = false; // KERNEL GÜVENCESİ: Asfalt ve binalar hiçbir kamera açısında mavi ekrana düşmez
           ch.receiveShadow = isRoadOrGround;
 
           // PBR Doku ve Malzeme Kalitesini Koru & Şeffaf Delikleri Engelle
@@ -322,7 +324,8 @@ class HighwayEngine {
       depthWrite: false
     }));
 
-    for (let i = 0; i < 80; i++) {
+    // 240 Parçacıklı Geniş Havuz (Yoğun drift & burnout duman fırtınaları için)
+    for (let i = 0; i < 240; i++) {
       const clonedMat = this.smokeMat.clone();
       const p = new THREE.Mesh(geom, clonedMat);
       p.userData.origSmokeMat = clonedMat;
@@ -333,39 +336,50 @@ class HighwayEngine {
   }
 
   // -------------------------------------------------------------
-  // 4. Drift & Burnout Gerçekçi ve Hafif Duman Sistemi
+  // 4. Supercharged Drift & Burnout Yoğun Duman Sistemi
   // -------------------------------------------------------------
-  emitDriftSmoke(worldPos, count = 1, isMotor = false) {
-    // Aracın tam arka tamponunun ve arka lastiklerinin arkasında
-    const rearZOffset = isMotor ? -1.30 : -2.35;
-    for (let i = 0; i < count; i++) {
-      const p = this.smokePool.find(item => !item.visible);
-      if (!p) break;
+  emitDriftSmoke(worldPos, count = 2, isMotor = false, yawAngle = 0) {
+    const cosY = Math.cos(yawAngle);
+    const sinY = Math.sin(yawAngle);
 
-      p.visible = true;
-      p.material = p.userData.origSmokeMat || this.smokeMat;
-      p.material.opacity = 0.30; // Hafif ve şeffaf duman
-      p.position.set(
-        worldPos.x + (Math.random() - 0.5) * (isMotor ? 0.35 : 0.85),
-        0.12 + Math.random() * 0.08,
-        worldPos.z + rearZOffset - Math.random() * 0.25
-      );
-      const initScale = 0.35 + Math.random() * 0.20;
-      p.scale.set(initScale, initScale, initScale);
-      p.rotation.z = Math.random() * Math.PI * 2;
-      p.userData = {
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: 0.45 + Math.random() * 0.60,
-        vz: -3.5 - Math.random() * 2.5,
-        rotSpeed: (Math.random() - 0.5) * 2.0,
-        grow: 1.1 + Math.random() * 0.6,
-        life: 0.55,
-        maxLife: 0.55,
-        baseOpacity: 0.30,
-        isSmoke: true
-      };
-      this.activeParticles.push(p);
-    }
+    // Motor: Tek arka tekerlek; Otomobil: Sağ ve sol bağımsız arka lastikler
+    const wheelOffsets = isMotor
+      ? [{ x: -sinY * 0.95, z: -cosY * 0.95 }]
+      : [
+          { x: -0.72 * cosY - sinY * 1.55, z: 0.72 * sinY - cosY * 1.55 },
+          { x: 0.72 * cosY - sinY * 1.55, z: -0.72 * sinY - cosY * 1.55 }
+        ];
+
+    wheelOffsets.forEach(off => {
+      for (let i = 0; i < count; i++) {
+        const p = this.smokePool.find(item => !item.visible);
+        if (!p) break;
+
+        p.visible = true;
+        p.material = p.userData.origSmokeMat || this.smokeMat;
+        p.material.opacity = 0.75; // Yoğun, tok ve hacimli beyaz lastik dumanı
+        p.position.set(
+          worldPos.x + off.x + (Math.random() - 0.5) * 0.28,
+          0.12 + Math.random() * 0.12,
+          worldPos.z + off.z - Math.random() * 0.25
+        );
+        const initScale = 0.50 + Math.random() * 0.30;
+        p.scale.set(initScale, initScale, initScale);
+        p.rotation.z = Math.random() * Math.PI * 2;
+        p.userData = {
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: 0.75 + Math.random() * 0.85,
+          vz: -this.scrollSpeed * 0.38 - Math.random() * 4.0,
+          rotSpeed: (Math.random() - 0.5) * 3.5,
+          grow: 2.1 + Math.random() * 1.1,
+          life: 0.95,
+          maxLife: 0.95,
+          baseOpacity: 0.75,
+          isSmoke: true
+        };
+        this.activeParticles.push(p);
+      }
+    });
   }
 
   emitBurnoutSmoke(worldPos, count = 2, isMotor = false) {
@@ -586,14 +600,15 @@ class HighwayEngine {
 
     this.accumulatedScroll = (this.accumulatedScroll || 0) + moveDist;
 
-    const camZ = (window.convoy && window.convoy.camera) ? window.convoy.camera.position.z : 0;
+    const rawCamZ = (window.convoy && window.convoy.camera) ? window.convoy.camera.position.z : 0;
+    const camZ = Number.isFinite(rawCamZ) ? rawCamZ : 0;
 
     // Asfalt zemin ve runway plakaları kamerayı lockstep takip eder (ASLA zemin delinmez)
     if (this.groundMesh) this.groundMesh.position.z = camZ;
     if (this.roadRunway) this.roadRunway.position.z = camZ;
 
-    // Şehir blokları kamera ekseninde [camZ - 150m, camZ + 846m] penceresinde kesintisiz akar
-    const minZ = camZ - 150.0;
+    // Şehir blokları kamera ekseninde [camZ - 180m, camZ + 816m] penceresinde kesintisiz akar
+    const minZ = camZ - 180.0;
     this.cityBlocks.forEach((block, idx) => {
       const baseOffset = idx * loopLen;
       let worldZ = (baseOffset - this.accumulatedScroll) % totalLength;

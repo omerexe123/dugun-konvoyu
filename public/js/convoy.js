@@ -302,27 +302,30 @@ class ConvoyManager {
   }
 
   // -------------------------------------------------------------
-  // 1. GÜL HEDİYESİ -> UZUN VE GERÇEKÇİ 60 FPS DRİFT (LASTİK İZLERİ DAHİL)
+  // 1. GÜL HEDİYESİ -> SUPERCHARGED 60 FPS DRİFT (AGRESİF KONTRA, GÖVDE YATMASI & YOĞUN DUMAN)
   // -------------------------------------------------------------
   triggerDrift(uniqueId) {
     const cObj = this.convoyCars[uniqueId];
     if (!cObj || cObj.isDrifting) return;
 
     cObj.isDrifting = true;
-    this.focusCar(uniqueId, 5000);
+    this.focusCar(uniqueId, 6500);
+
+    // Drift girişinde sinematik kamera darbesi (Screen Trauma)
+    this.cameraTrauma = Math.min(1.0, (this.cameraTrauma || 0) + 0.35);
 
     if (this.audio) this.audio.playTireDrift();
     this.showBanner(`🌹💨 ${cObj.user.nickname} GÜL HEDİYESİYLE ASFALTI AĞLATIYOR! UZUN DRİFT!`, 'banner-drift', 4500, 'images/gifts/rose.webp');
 
     const startX = cObj.group.position.x;
-    // Kendi şeridinden dışarı fırlamadan, şerit içinde kontrollü ve estetik drift
+    // Otoyol şeridinde asfalt dışına çıkmadan agresif, geniş yanlama
     const driftDir = startX >= 0 ? -1 : 1;
     cObj.driftState = {
       elapsed: 0,
-      duration: 3.8,
+      duration: 4.2,
       dir: driftDir,
       startX: startX,
-      maxLateral: 0.75 // Diğer şeritteki araçlara çarpmayan şerit içi drift
+      maxLateral: 1.40 // Agresif ve geniş yanlama mesafesi
     };
   }
 
@@ -810,48 +813,72 @@ class ConvoyManager {
         cObj.group.position.z = maxAllowedZ;
       }
 
-      // 60 FPS PÜRÜZSÜZ DRİFT FİZİĞİ (Şerit dışına taşmadan, estetik kayma)
+      // 60 FPS SUPERCHARGED TOKYO DRIFT MOTORU (Scandinavian flick, gövde yatması, yoğun duman & çift iz)
       if (cObj.isDrifting && cObj.driftState) {
         const ds = cObj.driftState;
         ds.elapsed += dt;
         const p = Math.min(1.0, ds.elapsed / ds.duration);
 
-        if (p < 0.20) {
-          // Giriş
-          const f = p / 0.20;
-          const smooth = f * f * (3 - 2 * f);
-          cObj.group.rotation.y = ds.dir * THREE.MathUtils.lerp(0, 0.45, smooth);
-          cObj.group.rotation.z = -ds.dir * 0.05 * smooth;
-          cObj.group.position.x = ds.startX + ds.dir * ds.maxLateral * smooth;
-        } else if (p < 0.76) {
-          // Apex / Sustained Slide
-          const slideF = (p - 0.20) / 0.56;
-          const sway = Math.sin(slideF * Math.PI * 4) * 0.04;
-          cObj.group.rotation.y = ds.dir * (0.42 + sway);
-          cObj.group.rotation.z = -ds.dir * 0.04;
+        if (p < 0.16) {
+          // 1. Faz: Scandinavian Flick & Kontra Başlangıcı (0.00 - 0.16)
+          const f = p / 0.16;
+          const flick = (f < 0.35)
+            ? -ds.dir * 0.14 * Math.sin((f / 0.35) * Math.PI) // Ters kontra başlangıcı
+            : ds.dir * Math.sin(((f - 0.35) / 0.65) * (Math.PI / 2)); // Yanlama açısına sert giriş
+          
+          cObj.group.rotation.y = THREE.MathUtils.lerp(0, ds.dir * 0.68, Math.max(0, flick));
+          // Gövde yatması (Ağırlık transferi - viraj dışı süspansiyon çökmesi)
+          cObj.group.rotation.z = -ds.dir * 0.11 * f;
+          // Burun dalması (Fren/gaz kesme transferi)
+          cObj.group.rotation.x = -0.04 * f;
+
+          const smoothX = f * f * (3 - 2 * f);
+          cObj.group.position.x = ds.startX + ds.dir * ds.maxLateral * smoothX * 0.40;
+        } else if (p < 0.78) {
+          // 2. Faz: Apex / Sustained Power Slide (0.16 - 0.78)
+          const slideF = (p - 0.16) / 0.62;
+          const sway = Math.sin(slideF * Math.PI * 4.5) * 0.05;
+          const bodyRollSway = Math.cos(slideF * Math.PI * 4.5) * 0.02;
+
+          // Agresif Yan Açısı: 0.66 rad (~38-41 derece)
+          cObj.group.rotation.y = ds.dir * (0.66 + sway);
+          // Süspansiyon Yığılması (Gövde sertçe dışa yatar): ~6.5 derece
+          cObj.group.rotation.z = -ds.dir * (0.11 + bodyRollSway);
+          // Arka oturma (Power slide ivmesi): arka amortisörler yere basar
+          cObj.group.rotation.x = 0.035;
+
+          // Geniş yanal kayma
           cObj.group.position.x = ds.startX + ds.dir * (ds.maxLateral + sway);
 
           if (window.highwayEngine) {
-            window.highwayEngine.emitDriftSmoke(cObj.group.position, 1, cObj.isMotor);
+            window.highwayEngine.emitDriftSmoke(cObj.group.position, 2, cObj.isMotor, cObj.group.rotation.y);
             window.highwayEngine.emitSkidMarks(cObj.user.uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
           }
-        } else if (p < 1.0) {
-          // Çıkış
-          const exitF = (p - 0.76) / 0.24;
+        } else if (p < 0.94) {
+          // 3. Faz: Kontra Toparlama / Snap-Back (0.78 - 0.94)
+          const exitF = (p - 0.78) / 0.16;
           const smoothExit = exitF * exitF * (3 - 2 * exitF);
-          cObj.group.rotation.y = -ds.dir * 0.15 * (1.0 - smoothExit);
-          cObj.group.rotation.z = 0;
+
+          cObj.group.rotation.y = -ds.dir * 0.22 * (1.0 - smoothExit);
+          cObj.group.rotation.z = -ds.dir * 0.04 * (1.0 - smoothExit);
+          cObj.group.rotation.x = 0.015 * (1.0 - smoothExit);
           cObj.group.position.x = THREE.MathUtils.lerp(ds.startX + ds.dir * ds.maxLateral, cObj.targetPos.x, smoothExit);
 
           if (window.highwayEngine) {
-            window.highwayEngine.emitDriftSmoke(cObj.group.position, 1, cObj.isMotor);
+            window.highwayEngine.emitDriftSmoke(cObj.group.position, 1, cObj.isMotor, cObj.group.rotation.y);
             window.highwayEngine.emitSkidMarks(cObj.user.uniqueId, cObj.group.position, cObj.group.rotation.y, cObj.isMotor);
           }
         } else {
-          cObj.isDrifting = false;
-          cObj.driftState = null;
+          // 4. Faz: Şeride Kilitlenme & Stabilizasyon (0.94 - 1.00)
+          const finF = (p - 0.94) / 0.06;
           cObj.group.rotation.set(0, 0, 0);
-          if (window.highwayEngine) window.highwayEngine.clearSkidTrack(cObj.user.uniqueId);
+          cObj.group.position.x = THREE.MathUtils.lerp(cObj.group.position.x, cObj.targetPos.x, finF);
+          if (p >= 1.0) {
+            cObj.isDrifting = false;
+            cObj.driftState = null;
+            cObj.group.rotation.set(0, 0, 0);
+            if (window.highwayEngine) window.highwayEngine.clearSkidTrack(cObj.user.uniqueId);
+          }
         }
       } else if (cObj.isOvertaking && cObj.overtakeState) {
         // 60 FPS PÜRÜZSÜZ MAKAS / ŞERİT DEĞİŞTİRME FİZİĞİ (setInterval kesinlikle yok)

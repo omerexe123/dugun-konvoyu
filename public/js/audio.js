@@ -224,7 +224,7 @@ class ConvoyAudioEngine {
     }
   }
 
-  // 2. GERÇEK LASTİK KAYMA & DRİFT SESİ (Authentic Tire Screech)
+  // 2. GERÇEK LASTİK KAYMA & SUPERCHARGED DRİFT SESİ (Authentic Tire Screech & Burnout Layer)
   playTireDrift() {
     if (this.muted) return;
     this.init();
@@ -232,26 +232,35 @@ class ConvoyAudioEngine {
     if (this.sfxBuffers.drift) {
       // Doğal varyasyon için rastgele hafif pitch farkı (+-%6)
       const jitter = 0.94 + Math.random() * 0.12;
-      this.playBuffer('drift', { volume: 0.85, rate: jitter });
-      return;
+      this.playBuffer('drift', { volume: 1.0, rate: jitter });
     }
 
-    // Yedek
+    // Tok burnout kükremesini drift ortasında katmanla (Motor devir patlaması)
+    if (this.sfxBuffers.burnout) {
+      setTimeout(() => {
+        if (!this.muted) {
+          const bJitter = 1.08 + Math.random() * 0.14;
+          this.playBuffer('burnout', { volume: 0.70, rate: bJitter });
+        }
+      }, 240);
+    }
+
+    // Yedek / Güçlendirici Web Audio Synthesizer Katmanı
     try {
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(840, t);
-      osc.frequency.linearRampToValueAtTime(1180, t + 0.35);
-      osc.frequency.linearRampToValueAtTime(720, t + 1.2);
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.linearRampToValueAtTime(1280, t + 0.35);
+      osc.frequency.linearRampToValueAtTime(740, t + 1.4);
       gain.gain.setValueAtTime(0.01, t);
-      gain.gain.linearRampToValueAtTime(0.24 * this.sfxVolume, t + 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + 1.3);
+      gain.gain.linearRampToValueAtTime(0.32 * this.sfxVolume, t + 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 1.6);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(t);
-      osc.stop(t + 1.35);
+      osc.stop(t + 1.65);
     } catch (e) {}
   }
 
