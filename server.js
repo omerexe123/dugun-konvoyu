@@ -932,8 +932,16 @@ app.post('/api/simulate', (req, res) => {
 // WebSocket & Çoklu İstemci Ses Koordinasyonu (OBS vs Tarayıcı)
 // -------------------------------------------------------------
 let activeAudioClientId = null;
+let activeAudioTime = 0;
+let activeAudioWs = null;
 
 wss.on('connection', ws => {
+  // 6 saniyeden eski ölü liderliği temizle
+  if (activeAudioClientId && (Date.now() - activeAudioTime > 6000)) {
+    activeAudioClientId = null;
+    activeAudioWs = null;
+  }
+
   const sortedConvoy = getSortedConvoy();
   ws.send(JSON.stringify({
     type: 'INIT_CONVOY_STATE',
@@ -950,20 +958,27 @@ wss.on('connection', ws => {
   ws.on('message', raw => {
     try {
       const msg = JSON.parse(raw);
-      if (msg.type === 'CLAIM_AUDIO_LEADER') {
+      if (msg.type === 'CLAIM_AUDIO_LEADER' || msg.type === 'AUDIO_HEARTBEAT') {
         activeAudioClientId = msg.clientId;
-        // Diğer tüm istemcilere (OBS veya diğer sekmelere) anında susturma emri ver
-        wss.clients.forEach(client => {
-          if (client !== ws && client.readyState === 1) {
-            client.send(JSON.stringify({
-              type: 'MUTEX_STOP_AUDIO',
-              payload: { activeClientId: msg.clientId }
-            }));
-          }
-        });
+        activeAudioTime = Date.now();
+        activeAudioWs = ws;
+        ws.audioClientId = msg.clientId;
+
+        if (msg.type === 'CLAIM_AUDIO_LEADER') {
+          // Diğer tüm istemcilere (OBS veya diğer sekmelere) anında susturma emri ver
+          wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === 1) {
+              client.send(JSON.stringify({
+                type: 'MUTEX_STOP_AUDIO',
+                payload: { activeClientId: msg.clientId }
+              }));
+            }
+          });
+        }
       } else if (msg.type === 'RELEASE_AUDIO_LEADER') {
         if (activeAudioClientId === msg.clientId) {
           activeAudioClientId = null;
+          activeAudioWs = null;
         }
       } else if (msg.type === 'CONNECT_TIKTOK') {
         connectToTikTok(msg.username);
@@ -976,7 +991,14 @@ wss.on('connection', ws => {
         broadcast('TIKTOK_STATUS', liveStatus);
       }
     } catch (e) {
-      console.error('[WS] Mesaj işleme hatası:', e.message);
+      console.warn('[WS message error]', e.message);
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.audioClientId && ws.audioClientId === activeAudioClientId) {
+      activeAudioClientId = null;
+      activeAudioWs = null;
     }
   });
 });

@@ -39,14 +39,29 @@ class ConvoyAudioEngine {
     // Çoklu Sekme ve OBS Ses Çakışmasını Engelleyen Master Mutex
     this.tabId = 'tab_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
     this.tabChannel = null;
-    this._initCrossTabSync();
+    this.isRemoteMuted = false;
+    this._heartbeatTimer = null;
 
-    // URL Parametreleri (OBS veya Sessiz Mod: ?nomusic=1 veya ?mute=1)
+    // URL Parametreleri ve OBS Otomatik Tespiti
     const urlParams = new URLSearchParams(window.location.search);
+    this.isObs = (urlParams.get('obs') === '1' || navigator.userAgent.includes('OBS') || navigator.userAgent.includes('Streamlabs') || Boolean(window.obsstudio));
+
     if (urlParams.get('nomusic') === '1' || urlParams.get('mute') === '1') {
       this.muted = true;
       this.musicAudio.volume = 0;
     }
+
+    // Açılışta başka bir sekme/istemci çalıyor mu kontrol et:
+    try {
+      const lastHb = parseInt(localStorage.getItem('convoy_music_heartbeat') || '0', 10);
+      const masterTab = localStorage.getItem('convoy_music_master_tab');
+      if (masterTab && masterTab !== this.tabId && (Date.now() - lastHb < 5000)) {
+        this.isRemoteMuted = true;
+        console.log('[ConvoyAudio] Başka bir sekme/OBS zaten müzik çalıyor. Bu sekme susturuldu.');
+      }
+    } catch (e) {}
+
+    this._initCrossTabSync();
 
     // Varsayılan Çalma Listesi (JSON yüklenene kadar veya offline yedek)
     this.defaultPlaylist = [
@@ -71,10 +86,12 @@ class ConvoyAudioEngine {
     // İlk kullanıcı etkileşiminde ses bağlamını ve müziği uyandır
     const unlockAudio = () => {
       this.init();
-      // Eğer henüz müzik çalmıyorsa otomatik başlat
-      if (!this.musicPlaying && !this.muted) {
-        this.startMusic();
+      // Başka sekme veya OBS zaten çalıyorsa veya susturulduysa ASLA ikinci müzik başlatma!
+      if (this.isAnotherClientActive() || this.isRemoteMuted || this.muted || this.musicPlaying) {
+        console.log('[ConvoyAudio] unlockAudio: Müzik kilitli, başka istemci çalıyor.');
+        return;
       }
+      this.startMusic(false);
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
@@ -83,12 +100,12 @@ class ConvoyAudioEngine {
     window.addEventListener('keydown', unlockAudio);
     window.addEventListener('touchstart', unlockAudio);
 
-    // OBS / Yayın Modu: OBS Browser Source içinde insan tıklaması olmayacağı için doğrudan ses motorunu tetikle
-    if (urlParams.get('obs') === '1' || urlParams.get('autoplay') === '1') {
+    // OBS / Yayın Modu: OBS Browser Source içinde doğrudan ses motorunu tetikle
+    if (this.isObs || urlParams.get('autoplay') === '1') {
       const tryAutoStart = () => {
         this.init();
-        if (!this.musicPlaying && !this.muted) {
-          this.startMusic();
+        if (!this.musicPlaying && !this.muted && !this.isAnotherClientActive()) {
+          this.startMusic(true);
         }
       };
       setTimeout(tryAutoStart, 300);
@@ -416,6 +433,46 @@ class ConvoyAudioEngine {
 
   // --- ARKA PLAN MÜZİK MOTORU (TEKİL MASTER & ÇOKLU SEKME KORUMALI) ---
 
+  isAnotherClientActive() {
+    if (this.isRemoteMuted) return true;
+    try {
+      const lastHb = parseInt(localStorage.getItem('convoy_music_heartbeat') || '0', 10);
+      const masterTab = localStorage.getItem('convoy_music_master_tab');
+      if (masterTab && masterTab !== this.tabId && (Date.now() - lastHb < 5000)) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  _startHeartbeat() {
+    this._stopHeartbeat();
+    this._heartbeatTimer = setInterval(() => {
+      if (this.musicPlaying && !this.muted) {
+        try {
+          localStorage.setItem('convoy_music_heartbeat', Date.now().toString());
+          localStorage.setItem('convoy_music_master_tab', this.tabId);
+          if (window.__convoyWs && window.__convoyWs.readyState === 1) {
+            window.__convoyWs.send(JSON.stringify({
+              type: 'AUDIO_HEARTBEAT',
+              clientId: this.tabId,
+              isObs: this.isObs
+            }));
+          }
+        } catch (e) {}
+      } else {
+        this._stopHeartbeat();
+      }
+    }, 2000);
+  }
+
+  _stopHeartbeat() {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = null;
+    }
+  }
+
   // Çoklu sekme ve pencere senkronizasyonu: Aynı anda yalnızca 1 sekme müzik çalabilir
   _initCrossTabSync() {
     if (typeof BroadcastChannel !== 'undefined') {
@@ -424,11 +481,10 @@ class ConvoyAudioEngine {
         this.tabChannel.onmessage = (event) => {
           if (!event || !event.data) return;
           if (event.data.type === 'CLAIM_MASTER_PLAYBACK' && event.data.tabId !== this.tabId) {
-            // Başka bir sekme müzik başlattı: Bu sekmedeki müziği anında ve sessizce durdur!
-            if (this.musicPlaying) {
-              console.log('[ConvoyAudio] Başka bir sekme aktifleşti. Çift müzik çalmasını önlemek için bu sekme susturuldu.');
-              this.pauseMusic(false);
-            }
+            console.log('[ConvoyAudio] Başka bir sekme aktifleşti. Çift müzik önleme kalkanı devrede.');
+            this.isRemoteMuted = true;
+            this.pauseMusic(false);
+            this.updateNowPlayingUI();
           }
         };
       } catch (e) {}
@@ -436,10 +492,15 @@ class ConvoyAudioEngine {
 
     // BroadcastChannel olmayan tarayıcılar için LocalStorage Fallback
     window.addEventListener('storage', (e) => {
-      if (e.key === 'convoy_music_master_tab') {
-        if (e.newValue && e.newValue !== this.tabId && this.musicPlaying) {
-          console.log('[ConvoyAudio] LocalStorage uyarısı: Başka sekme aktif, müzik durduruluyor.');
-          this.pauseMusic(false);
+      if (e.key === 'convoy_music_master_tab' || e.key === 'convoy_music_heartbeat') {
+        const masterTab = localStorage.getItem('convoy_music_master_tab');
+        if (masterTab && masterTab !== this.tabId) {
+          this.isRemoteMuted = true;
+          if (this.musicPlaying) {
+            console.log('[ConvoyAudio] LocalStorage uyarısı: Başka sekme aktif, müzik durduruluyor.');
+            this.pauseMusic(false);
+            this.updateNowPlayingUI();
+          }
         }
       }
     });
@@ -450,6 +511,7 @@ class ConvoyAudioEngine {
     try {
       localStorage.setItem('convoy_music_master_tab', this.tabId);
       localStorage.setItem('convoy_music_master_time', Date.now().toString());
+      localStorage.setItem('convoy_music_heartbeat', Date.now().toString());
       if (this.tabChannel) {
         this.tabChannel.postMessage({ type: 'CLAIM_MASTER_PLAYBACK', tabId: this.tabId });
       }
@@ -457,6 +519,7 @@ class ConvoyAudioEngine {
         window.__convoyWs.send(JSON.stringify({ type: 'CLAIM_AUDIO_LEADER', clientId: this.tabId }));
       }
     } catch (e) {}
+    this._startHeartbeat();
   }
 
   handleRemoteAudioStop(activeClientId) {
@@ -522,8 +585,16 @@ class ConvoyAudioEngine {
     sel.value = this.currentTrackIndex;
   }
 
-  playTrack(index) {
+  playTrack(index, force = false) {
     if (!this.playlist || this.playlist.length === 0) return;
+
+    // Başka sekme veya OBS zaten aktif çalıyorsa ve zorlanmadıysa ASLA başlatma:
+    if (!force && this.isAnotherClientActive()) {
+      console.log('[ConvoyAudio] playTrack engellendi: Başka sekme veya OBS aktif çalıyor.');
+      this.isRemoteMuted = true;
+      this.updateNowPlayingUI();
+      return;
+    }
 
     // Hızlı tıklama ve ardışık tetiklemeleri engelleyen 250ms atomik kilit
     const now = Date.now();
@@ -560,6 +631,7 @@ class ConvoyAudioEngine {
         .then(() => {
           this._switchingTrack = false;
           this.musicPlaying = true;
+          this._startHeartbeat();
           this.updateNowPlayingUI();
         })
         .catch(err => {
@@ -570,6 +642,7 @@ class ConvoyAudioEngine {
           }
           console.log('[ConvoyAudio] Müzik otomatik başlatma kullanıcı etkileşimi bekliyor:', err.message);
           this.musicPlaying = false;
+          this._stopHeartbeat();
           this.updateNowPlayingUI();
         });
     } else {
@@ -577,14 +650,23 @@ class ConvoyAudioEngine {
     }
   }
 
-  startMusic() {
+  startMusic(force = false) {
     if (this.musicPlaying) return;
+    if (!force && this.isAnotherClientActive()) {
+      console.log('[ConvoyAudio] startMusic engellendi: Başka sekme aktif.');
+      this.isRemoteMuted = true;
+      this.updateNowPlayingUI();
+      return;
+    }
+
+    this.isRemoteMuted = false;
     if (!this.musicAudio.src && this.playlist.length > 0) {
-      this.playTrack(this.currentTrackIndex);
+      this.playTrack(this.currentTrackIndex, force);
     } else {
       this._claimMasterPlayback();
       this.musicAudio.play().then(() => {
         this.musicPlaying = true;
+        this._startHeartbeat();
         this.updateNowPlayingUI();
       }).catch(() => {});
     }
@@ -592,6 +674,7 @@ class ConvoyAudioEngine {
 
   pauseMusic(broadcast = true) {
     clearTimeout(this._errorRetryTimer);
+    this._stopHeartbeat();
     try {
       this.musicAudio.pause();
     } catch (e) {}
@@ -602,6 +685,10 @@ class ConvoyAudioEngine {
       try {
         if (localStorage.getItem('convoy_music_master_tab') === this.tabId) {
           localStorage.removeItem('convoy_music_master_tab');
+          localStorage.removeItem('convoy_music_heartbeat');
+        }
+        if (window.__convoyWs && window.__convoyWs.readyState === 1) {
+          window.__convoyWs.send(JSON.stringify({ type: 'RELEASE_AUDIO_LEADER', clientId: this.tabId }));
         }
       } catch (e) {}
     }
@@ -611,25 +698,26 @@ class ConvoyAudioEngine {
     if (this.musicPlaying) {
       this.pauseMusic(true);
     } else {
-      this.startMusic();
+      // Kullanıcı arayüzden butona bastıysa, bu sekmede zorla başlat (force = true)
+      this.startMusic(true);
     }
     return this.musicPlaying;
   }
 
   nextTrack() {
-    this.playTrack(this.currentTrackIndex + 1);
+    this.playTrack(this.currentTrackIndex + 1, true);
   }
 
   prevTrack() {
-    this.playTrack(this.currentTrackIndex - 1);
+    this.playTrack(this.currentTrackIndex - 1, true);
   }
 
   // Düğün Kutlama / Halay Özel Teması (İkinci bir ses kanalı açmaz, doğrudan tekil motoru halaya yönlendirir)
   startDavulZurnaTheme(durationMs = 15000) {
-    if (this.muted) return;
+    if (this.muted || this.isRemoteMuted) return;
     const halayIndex = this.playlist.findIndex(t => t.id === 'dugun_halay_potpori');
     if (halayIndex !== -1 && this.currentTrackIndex !== halayIndex) {
-      this.playTrack(halayIndex);
+      this.playTrack(halayIndex, false);
     }
   }
 
@@ -648,11 +736,14 @@ class ConvoyAudioEngine {
     this.muted = !this.muted;
     if (this.muted) {
       this.musicAudio.volume = 0;
+      this.pauseMusic(true);
     } else {
+      this.isRemoteMuted = false;
       this.musicAudio.volume = this.musicVolume;
       if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume();
       }
+      this.startMusic(true);
     }
     this.updateNowPlayingUI();
     return this.muted;
@@ -698,9 +789,11 @@ class ConvoyAudioEngine {
     if (panTitle) panTitle.textContent = track ? track.title : '';
     if (panBtn) {
       if (this.isRemoteMuted) {
-        panBtn.innerHTML = '🔇 Diğer İstemcide Çalıyor (Susturuldu)';
+        panBtn.innerHTML = '🔇 Diğer İstemcide Çalıyor (Burada Çal)';
+        panBtn.title = 'Müzik şu an OBS veya başka sekmede çalıyor. Bu sekmede çalmak için tıkla.';
       } else {
         panBtn.innerHTML = this.musicPlaying && !this.muted ? '⏸️ Müzik Durdur' : '▶️ Müzik Başlat';
+        panBtn.title = '';
       }
     }
     if (sel && sel.value !== String(this.currentTrackIndex)) {

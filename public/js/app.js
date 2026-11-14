@@ -442,6 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
     ws.onopen = () => {
       console.log('[WS] Düğün konvoyu sunucusuna bağlandı!');
       addLog('Sunucuya bağlandı.', 'log-sys');
+      if (audio && audio.musicPlaying && !audio.muted) {
+        audio._claimMasterPlayback();
+      }
       if (autoUser) {
         setTimeout(() => {
           if (ws && ws.readyState === WebSocket.OPEN) {
