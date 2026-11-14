@@ -584,13 +584,16 @@ class ConvoyManager {
     }
   }
 
-  // En çok drift atan konvoy lideri aracını bulur (Rank 0 / Max Drifts - Solla Geç Lideri)
+  // Konvoy lideri aracını bulur (Rank 0: En çok paylaşan veya en çok drift atan Zirve Lideri)
   getTopDrifterCar() {
     const cars = this.activeCarsList;
     if (!cars || cars.length === 0) return null;
     let topCar = cars.find(c => c.rankIdx === 0);
     if (!topCar) {
       topCar = cars.slice().sort((a, b) => {
+        const shareB = b.user?.shareCount || 0;
+        const shareA = a.user?.shareCount || 0;
+        if (shareB !== shareA) return shareB - shareA;
         const driftB = b.user?.driftCount || 0;
         const driftA = a.user?.driftCount || 0;
         if (driftB !== driftA) return driftB - driftA;

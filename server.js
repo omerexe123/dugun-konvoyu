@@ -187,6 +187,7 @@ function getOrCreateConvoyUser(uniqueId, nickname = '', avatar = '', vehicleType
       carName: vehicleType === 'motor' ? MOTOR_TIERS[0].name : CAR_TIERS[0].name,
       likesSent: 0,
       driftCount: 0,
+      shareCount: 0,
       giftsSent: 0,
       joinedAt: Date.now(),
       lastActive: Date.now()
@@ -435,6 +436,13 @@ function connectToTikTok(targetUsername) {
       handleUserJoin(u.uniqueId, u.nickname, u.avatar);
     });
 
+    // Canlı yayını paylaşan izleyici anında en öne fırlar
+    liveClient.on('share', data => {
+      const u = extractTikTokUser(data);
+      console.log(`[TIKTOK SHARE] @${u.uniqueId} (${u.nickname}) yayını paylaştı!`);
+      handleUserShare(u.uniqueId, u.nickname, u.avatar);
+    });
+
     // Streak hediyeleri (GG, Gül vb.) kaçırmadan anında işleyen akıllı takip tablosu
     const activeGiftStreaks = {};
 
@@ -567,6 +575,45 @@ function handleUserLikes(uniqueId, nickname, avatar, count = 1) {
   updateBattleAndMilestone(Math.random() < 0.5 ? 'bride' : 'groom', count, 0);
 }
 
+// Canlı Yayını Paylaşma: Paylaşan kişi Zirve Kuralı ile konvoyda EN ÖNE geçer!
+function handleUserShare(uniqueId, nickname, avatar) {
+  uniqueId = String(uniqueId || '').trim();
+  if (!uniqueId || uniqueId === 'undefined') {
+    uniqueId = 'izleyici_' + Math.floor(Math.random() * 90000 + 10000);
+  }
+  if (!nickname || nickname === 'undefined') {
+    nickname = 'Konvoycu_' + uniqueId.slice(-4);
+  }
+
+  const user = getOrCreateConvoyUser(uniqueId, nickname, avatar);
+  user.shareCount = (user.shareCount || 0) + 1;
+  user.points = (user.points || 0) + 50;
+  user.lastActive = Date.now();
+  saveState();
+
+  const sorted = getSortedConvoy();
+  const rankIdx = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+
+  broadcast('EVENT_SHARE', {
+    user,
+    rankIdx: Math.max(0, rankIdx),
+    sortedConvoy: sorted,
+    durationMs: 14000,
+    message: `📢🔥 @${user.nickname} YAYINI PAYLAŞTI! EN ÖNE GEÇİYOR! (Paylaşım: ${user.shareCount}x - Sıra: #${rankIdx + 1})`
+  });
+}
+
+// Hediyenin büyüklüğüne göre dinamik kamera odaklanma süresi (ms)
+function getGiftFocusDuration(diamondCount = 1) {
+  const coins = Number(diamondCount) || 1;
+  if (coins >= 1000) return 28000; // Galaksi / Evren -> 28 saniye VIP yayın odağı
+  if (coins >= 500) return 22000;  // Aslan / Ejderha -> 22 saniye
+  if (coins >= 99) return 17000;   // Şapka & Bıyık (Damat) -> 17 saniye
+  if (coins >= 20) return 13000;   // Araba Yükseltme / Parfüm (Gelin) -> 13 saniye
+  if (coins >= 5) return 9500;     // Parmak Kalp / Orta hediye -> 9.5 saniye
+  return 7500;                     // 1 coinlik hediyeler (Gül, GG vb.) -> 7.5 saniye
+}
+
 // SADECE HEDİYE İLE ARABA YÜKSELTME FONKSİYONU
 function upgradeUserVehicle(user, giftName = '', diamondCount = 1) {
   const prevTier = user.vehicleType === 'motor' ? (user.motorTier || 1) : (user.tier || 1);
@@ -653,6 +700,7 @@ function handleBecomeBride(uniqueId, nickname, avatar, giftLabel = 'Perfume (20�
     user,
     brideName: nickname,
     groomName: gameState.groomName,
+    durationMs: 15000,
     giftIcon: 'images/gifts/perfume.webp',
     giftName: giftLabel,
     message: `👰👑 ${nickname} ${giftLabel} GÖNDEREREK YENİ GELİN OLDU! MERCEDES GELİN TAHTINA GEÇTİ!`
@@ -672,6 +720,7 @@ function handleBecomeGroom(uniqueId, nickname, avatar, giftLabel = 'Hat and Must
     user,
     brideName: gameState.brideName,
     groomName: nickname,
+    durationMs: 18000,
     giftIcon: 'images/gifts/hat_mustache.webp',
     giftName: giftLabel,
     message: `🤵👑 ${nickname} ${giftLabel} GÖNDEREREK YENİ DAMAT OLDU! MERCEDES DAMAT TAHTINA GEÇTİ!`
@@ -729,23 +778,46 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
   const isBrideSide = gName.includes('perfume') || gName.includes('parfüm') || gName.includes('swan') || gName.includes('kuğu') || gName.includes('rose') || gName.includes('gül') || gName.includes('kalp');
   updateBattleAndMilestone(isBrideSide ? 'bride' : 'groom', (diamondCount || 1) * 3 * repeatCount, repeatCount);
 
-  // 1. KURAL: 20x ROSE VEYA 20+ COIN HEDİYE -> ARABA YÜKSELTME (TikTok Rose 20x = 20 coin)
-  const isRoseGift = gName.includes('rose') || gName.includes('gül');
-  const isUpgradeAction = gName.includes('upgrade') || gName.includes('yükselt') || (isRoseGift && (repeatCount >= 20 || diamondCount >= 20));
+  const durationMs = getGiftFocusDuration(diamondCount);
 
-  if (isUpgradeAction) {
-    upgradeUserVehicle(user, `${repeatCount >= 20 ? repeatCount + 'x Gül' : giftName}`, diamondCount || 20);
-    addPointsToConvoyUser(user, 60 * Math.max(1, Math.floor((diamondCount || repeatCount) / 20)), 'Araba Yükseltme');
-    const sorted = getSortedConvoy();
-    const sortedRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
-    broadcast('EVENT_CAR_UPGRADE', {
-      user,
-      rankIdx: Math.max(0, sortedRank),
-      sortedConvoy: sorted,
-      giftIcon: 'images/gifts/rose.webp',
-      message: `🚀✨ ${user.nickname} 20x ROSE (20🪙) İLE ARABASINI YÜKSELTTİ! YENİ ARAÇ: ${user.carName}!`
-    });
-    return;
+  // 1. KURAL: ROSE (GÜL - 1🪙) HEDİYESİ
+  // KESİN AYRIŞTIRMA: 1x-19x Gül kesinlikle DRİFT ATIP SOLLATIR (Asla motora yükselmez!).
+  // 20x ve üzeri Gül ise ARABA YÜKSELTİR.
+  const isRoseGift = gName.includes('rose') || gName.includes('gül') || gName.includes('gul') || sGiftId === '5655';
+
+  if (isRoseGift) {
+    if (repeatCount >= 20 || diamondCount >= 20) {
+      upgradeUserVehicle(user, `${repeatCount >= 20 ? repeatCount + 'x Gül' : giftName}`, diamondCount || 20);
+      addPointsToConvoyUser(user, 60 * Math.max(1, Math.floor((diamondCount || repeatCount) / 20)), 'Araba Yükseltme');
+      const sorted = getSortedConvoy();
+      const sortedRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+      broadcast('EVENT_CAR_UPGRADE', {
+        user,
+        rankIdx: Math.max(0, sortedRank),
+        sortedConvoy: sorted,
+        durationMs,
+        giftIcon: 'images/gifts/rose.webp',
+        message: `🚀✨ ${user.nickname} 20x ROSE (${diamondCount || 20}🪙) İLE ARABASINI YÜKSELTTİ! YENİ ARAÇ: ${user.carName}!`
+      });
+      return;
+    } else {
+      // 1x Gül -> Kesin ve tavizsiz DRİFT AT VE SOLLA GEÇ!
+      gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
+      user.driftCount = (user.driftCount || 0) + repeatCount;
+      addPointsToConvoyUser(user, 15 * repeatCount, `${giftName} Drifti`);
+      saveState();
+      const sorted = getSortedConvoy();
+      const newRank = sorted.findIndex(u => u.uniqueId === user.uniqueId);
+      broadcast('EVENT_DRIFT', {
+        user,
+        rankIdx: Math.max(0, newRank),
+        sortedConvoy: sorted,
+        durationMs,
+        giftIcon: 'images/gifts/rose.webp',
+        message: `🌹💨 ${user.nickname} GÜL (1🪙) İLE DRİFT ATTI VE SOLLAYIP GEÇTİ! (Konvoy Sırası: #${newRank + 1})`
+      });
+      return;
+    }
   }
 
   // 2. KURAL: PERFUME (Parfüm) -> GELİN OLMA
@@ -766,8 +838,19 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 5. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA
-  const isGG = gName === 'gg' || gName.includes('gg') || gName.includes('good game') || gName.includes('game') || gName.includes('kol') || gName.includes('konsol') || gName.includes('gamepad') || gName.includes('iyi oyun') || gName.includes('oyun') || gName.includes('motor') || gName.includes('motosiklet') || gName.includes('bike') || /6084|5655|6083|6085|6086|6104|6105|6106|6107|6108/.test(sGiftId);
+  // 5. KURAL: GG (1🪙) -> BEĞENİ BEKLEMEDEN DİREKT MOTORLA KONVOYA ÇIKMA (Gül asla buraya giremez!)
+  const isGG = !isRoseGift && (
+    gName === 'gg' ||
+    /\bgg\b/i.test(gName) ||
+    gName.includes('good game') ||
+    gName.includes('oyun kolu') ||
+    gName.includes('gamepad') ||
+    gName.includes('motosiklet') ||
+    gName.includes('motor') ||
+    gName.includes('bike') ||
+    /6084|6083|6085|6086|6104|6105|6106|6107|6108/.test(sGiftId)
+  );
+
   if (isGG) {
     switchToMotor(user);
     addPointsToConvoyUser(user, 20 * repeatCount, 'GG Motor Çıkışı');
@@ -778,6 +861,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
       user,
       rankIdx: Math.max(0, ggRank),
       sortedConvoy: sorted,
+      durationMs,
       giftIcon: 'images/gifts/gg.webp',
       message: `🏍️💨 ${user.nickname} GG (1🪙) İLE ÖZEL MOTORUYLA KONVOYA FIRLADI!`
     });
@@ -793,6 +877,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     broadcast('EVENT_BURNOUT', {
       user,
       sortedConvoy: sorted,
+      durationMs,
       giftIcon: 'images/gifts/cake_slice.webp',
       message: `💨🔥 ${user.nickname} CAKE SLICE (1🪙) İLE LASTİK YAKIYOR! ASFALTI AĞLATIYOR!`
     });
@@ -807,6 +892,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
       saveState();
       broadcast('EVENT_WHEELIE', {
         user,
+        durationMs,
         giftIcon: 'images/gifts/ice_cream.webp',
         message: `🏍️⚡ ${user.nickname} ICE CREAM CONE (1🪙) İLE MOTOSİKLETİNİ TEK TEKERE KALDIRDI!`
       });
@@ -822,6 +908,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
         user,
         rankIdx: Math.max(0, newRank),
         sortedConvoy: sorted,
+        durationMs,
         giftIcon: 'images/gifts/ice_cream.webp',
         message: `🌹💨 ${user.nickname} DONDURMA (1🪙) İLE YANLADI VE SOLLADI! (Sıra: #${newRank + 1})`
       });
@@ -829,7 +916,7 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     return;
   }
 
-  // 8. KURAL: 1x ROSE (GÜL - 1🪙) VE DİĞER TÜM 1 COINLİK HEDİYELER -> DRİFT AT VE SOLLA GEÇ!
+  // 8. KURAL: DİĞER TÜM 1 COINLİK HEDİYELER -> DRİFT AT VE SOLLA GEÇ!
   gameState.stats.totalDrifts = (gameState.stats.totalDrifts || 0) + 1;
   user.driftCount = (user.driftCount || 0) + repeatCount;
   addPointsToConvoyUser(user, 15 * repeatCount, `${giftName} Drifti`);
@@ -840,29 +927,35 @@ function handleGiftEvent(uniqueId, nickname, avatar, giftName, diamondCount, rep
     user,
     rankIdx: Math.max(0, newRank),
     sortedConvoy: sorted,
+    durationMs,
     giftIcon: 'images/gifts/rose.webp',
-    message: `🌹💨 ${user.nickname} DRİFT ATTI VE SOLLAYIP GEÇTİ! (Konvoy Sırası: #${newRank + 1})`
+    message: `🌹💨 ${user.nickname} ${giftName.toUpperCase()} İLE DRİFT ATTI VE SOLLAYIP GEÇTİ! (Konvoy Sırası: #${newRank + 1})`
   });
 }
 
 function getSortedConvoy() {
   return Object.values(gameState.users).sort((a, b) => {
-    // 1. En çok drift atan en öne geçer (driftCount - Solla Geç kuralı)
+    // 1. KURAL: Canlı yayını en çok paylaşan kişi EN ÖNE GEÇER (shareCount - Zirve Kuralı)
+    const shareB = b.shareCount || 0;
+    const shareA = a.shareCount || 0;
+    if (shareB !== shareA) return shareB - shareA;
+
+    // 2. KURAL: En çok drift atan sollar ve öne geçer (driftCount - Solla Geç Kuralı)
     const driftB = b.driftCount || 0;
     const driftA = a.driftCount || 0;
     if (driftB !== driftA) return driftB - driftA;
 
-    // 2. Eşitlikte genel puan (hediyeler vb.)
+    // 3. Eşitlikte genel puan (hediyeler vb.)
     const ptsB = b.points || 0;
     const ptsA = a.points || 0;
     if (ptsB !== ptsA) return ptsB - ptsA;
 
-    // 3. Eşitlikte beğeni sayısı (Beğenerek katılanlar arasında adil sıra)
+    // 4. Eşitlikte beğeni sayısı (Beğenerek katılanlar arasında adil sıra)
     const likesB = b.likesSent || 0;
     const likesA = a.likesSent || 0;
     if (likesB !== likesA) return likesB - likesA;
 
-    // 4. Eşitlikte katılım zamanı ve ID ile kararlı sıralama
+    // 5. Eşitlikte katılım zamanı ve ID ile kararlı sıralama
     return (a.joinedAt || 0) - (b.joinedAt || 0) || String(a.uniqueId).localeCompare(String(b.uniqueId));
   });
 }
@@ -993,6 +1086,9 @@ app.post('/api/simulate', (req, res) => {
       break;
     case 'like':
       handleUserLikes(uId, nick, avatar, 30);
+      break;
+    case 'share':
+      handleUserShare(uId, nick, avatar);
       break;
     case 'galaxy':
       handleGiftEvent(uId, nick, avatar, 'Galaksi', 1000, 1);

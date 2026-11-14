@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
         convoy.triggerDrift(payload.user.uniqueId);
         addLog(payload.message, 'log-drift');
         break;
@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
         convoy.triggerBurnout(payload.user.uniqueId);
         addLog(payload.message, 'log-burnout');
         break;
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 8000);
         convoy.showBanner(payload.message, 'banner-motor', 5000, payload.giftIcon || 'images/gifts/rosa.webp');
         addLog(payload.message, 'log-motor');
         break;
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
         convoy.triggerWheelie(payload.user.uniqueId);
         addLog(payload.message, 'log-wheelie');
         break;
@@ -610,10 +610,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
-        convoy.showBanner(payload.message, 'banner-upgrade', 4500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 13000);
+        convoy.showBanner(payload.message, 'banner-upgrade', 5000);
         if (audio) audio.playUpgradeFanfare();
         addLog(payload.message, 'log-upgrade');
+        break;
+
+      // 📢 Canlı Yayını Paylaşma: Paylaşan kişi en öne fırlar ve kamera ona kilitlenir!
+      case 'EVENT_SHARE':
+        if (payload.sortedConvoy && payload.sortedConvoy.length > 0) {
+          payload.sortedConvoy.forEach((u, idx) => convoy.spawnOrUpdateCar(u, idx));
+        } else if (payload.user) {
+          convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
+        }
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 14000);
+        convoy.showBanner(payload.message, 'banner-share', 6000);
+        convoy.triggerSelektor(payload.user?.uniqueId);
+        if (audio) audio.playWeddingHorn();
+        addLog(payload.message, 'log-share');
         break;
 
       case 'EVENT_OVERTAKE':
@@ -639,15 +653,15 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_GALAXY_FESTIVAL':
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 7000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 28000);
         if (audio) audio.startDavulZurnaTheme(15000);
-        convoy.showBanner(payload.message, 'banner-galaxy', 7000, payload.giftIcon || 'images/gifts/galaxy.webp');
+        convoy.showBanner(payload.message, 'banner-galaxy', 8000, payload.giftIcon || 'images/gifts/galaxy.webp');
         addLog(payload.message, 'log-galaxy');
         break;
 
       case 'EVENT_NEW_BRIDE':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 15000);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/swan.webp');
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');
@@ -655,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'EVENT_NEW_GROOM':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, 6500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 18000);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/lion.webp');
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');
@@ -994,6 +1008,8 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'locate':
         case 'findme':
           simulate({ type: 'locate', uniqueId: u, nickname: u }); break;
+        case 'share':
+          simulate({ type: 'share', uniqueId: u, nickname: u }); break;
       }
     });
   });
