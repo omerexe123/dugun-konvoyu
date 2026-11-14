@@ -620,12 +620,12 @@ class ConvoyManager {
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
         targetLookAt = new THREE.Vector3(0.5, 1.2, leadZ - 14.0);
       } else {
-        // Çekim 4: Yüksek Şehir Helikopter Uçuşu (High Flyover Drone)
+        // Çekim 4: Yüksek Şehir Dron Uçuşu (Dinamik Açı, Net Konvoy Kadrajı)
         const phase = (cycleTime - 42) / 14;
-        const camX = Math.sin(this.idleTimer * 0.2) * 6.0;
-        const camY = 19.0 + Math.sin(phase * Math.PI) * 3.0;
-        targetCamPos = new THREE.Vector3(camX, camY, leadZ + 25.0);
-        targetLookAt = new THREE.Vector3(0, 0.8, leadZ - 25.0);
+        const camX = Math.sin(this.idleTimer * 0.2) * 5.0;
+        const camY = 8.5 + Math.sin(phase * Math.PI) * 1.5;
+        targetCamPos = new THREE.Vector3(camX, camY, leadZ + 16.0);
+        targetLookAt = new THREE.Vector3(0, 1.2, leadZ - 18.0);
       }
 
       this.currentCamPos.lerp(targetCamPos, 0.040);
@@ -649,8 +649,8 @@ class ConvoyManager {
         this.camera.lookAt(0, 1.35, leadZ);
         break;
       case 3: // 🚁 Helikopter / Kuşbakışı (Televizyon Yayını)
-        this.camera.position.set(0, 42.0, leadZ - 12.0);
-        this.camera.lookAt(0, 0, leadZ - 6.0);
+        this.camera.position.set(0, 18.0, leadZ + 15.0);
+        this.camera.lookAt(0, 1.2, leadZ - 15.0);
         break;
       case 4: // 🏎️ Yan Şerit Takip Arabası (Side Tracking)
         this.camera.position.set(5.6, 2.6, leadZ - 3.0);
@@ -752,6 +752,12 @@ class ConvoyManager {
       const distToTarget = Math.abs(effectiveTargetZ - currentZ);
       const lerpSpeed = THREE.MathUtils.clamp(distToTarget * 0.015 + 0.05, 0.04, 0.10);
       cObj.group.position.z = THREE.MathUtils.lerp(currentZ, effectiveTargetZ, lerpSpeed);
+
+      // KESİN GÜVENLİK SINIRI: Hiçbir araç gelin arabasının önüne geçemez ve harita dışına fırlayamaz!
+      const maxAllowedZ = this.leadCar ? this.leadCar.position.z - 7.5 : -1.5;
+      if (cObj.group.position.z > maxAllowedZ) {
+        cObj.group.position.z = maxAllowedZ;
+      }
 
       // 60 FPS PÜRÜZSÜZ DRİFT FİZİĞİ (Şerit dışına taşmadan, estetik kayma)
       if (cObj.isDrifting && cObj.driftState) {
@@ -889,26 +895,25 @@ class ConvoyManager {
     }
 
     // 2. KESİN VE SERT ÇARPIŞMA / İÇ İÇE GİRME ENGELLEYİCİ (Aynı şeritteki tampon teması)
+    // Kural: Yalnızca arkadaki araç geriye doğru esnetilir. Öndeki araç asla ileri fırlatılmaz!
     for (let i = 0; i < carsList.length; i++) {
       const vA = carsList[i];
       for (let j = i + 1; j < carsList.length; j++) {
         const vB = carsList[j];
 
-        const dx = vB.group.position.x - vA.group.position.x;
+        const absX = Math.abs(vB.group.position.x - vA.group.position.x);
         const dz = vB.group.position.z - vA.group.position.z;
-        const absX = Math.abs(dx);
         const absZ = Math.abs(dz);
 
-        // Farklı şeritlerdeki araçlar birbirini asla itmez (Şerit aralığı 2.95m)!
-        // Yalnızca aynı şeritte (absX < 1.6m) ve tampon temasında (absZ < 5.5m) boylamsal ayırma:
-        if (absX < 1.6 && absZ < 5.5) {
-          const overlapZ = 5.5 - absZ;
-          if (dz >= 0) {
-            vA.group.position.z -= overlapZ * 0.5;
-            vB.group.position.z += overlapZ * 0.5;
+        // Yalnızca aynı şeritte (absX < 1.6m) ve tampon temasında (absZ < 5.0m) ayırma:
+        if (absX < 1.6 && absZ < 5.0) {
+          const pushBack = (5.0 - absZ) * 0.4;
+          if (dz > 0) {
+            // vB önde, vA arkada -> vA geriye çekilir
+            vA.group.position.z -= pushBack;
           } else {
-            vB.group.position.z -= overlapZ * 0.5;
-            vA.group.position.z += overlapZ * 0.5;
+            // vA önde, vB arkada -> vB geriye çekilir
+            vB.group.position.z -= pushBack;
           }
         }
       }
@@ -980,6 +985,7 @@ class ConvoyManager {
     const tempV = this.tempV;
 
     // Gelin Arabası Bordo Plakası (Tam Tavanın Üstüne Sabit)
+    let leadScreen = null;
     if (this.leadCar && this.leadLabelEl) {
       tempV.set(this.leadCar.position.x, this.leadCar.position.y + 1.42, this.leadCar.position.z);
       tempV.project(camera);
@@ -995,11 +1001,13 @@ class ConvoyManager {
           this.leadLabelEl.style.display = 'flex';
           const lScale = Math.max(0.40, Math.min(0.95, 16.0 / Math.max(16.0, lDist)));
           this.leadLabelEl.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0) scale(${lScale.toFixed(2)}) translate(-50%, -100%)`;
+          leadScreen = { x: lx, y: ly };
         }
       }
     }
 
-    // Konvoy Araçları Etiketleri + Distance Culling
+    // 1. Aday etiketleri topla ve mesafeyi hesapla
+    const candidates = [];
     this.activeCarsList.forEach(cObj => {
       const carPos = cObj.group.position;
 
@@ -1014,35 +1022,78 @@ class ConvoyManager {
         return;
       }
 
-      // Her kamera açısında aracın tam tavan sacına / kaska sıfır temas eden koordinat
+      const dist = camera.position.distanceTo(carPos);
+
+      // KERNEL CLUTTER SHIELD: 38 metreden uzaktaki araçların etiketleri doğrudan cullanır
+      if (dist > 38) {
+        cObj.labelEl.style.display = 'none';
+        return;
+      }
+
       const labelHeight = cObj.isMotor ? 1.55 : 1.42;
       tempV.set(carPos.x, carPos.y + labelHeight, carPos.z);
       tempV.project(camera);
 
+      // Kamera arkasında veya frustum dışındaysa gizle
       if (tempV.z > 1 || tempV.z < -1) {
         cObj.labelEl.style.display = 'none';
         return;
       }
 
-      const dist = camera.position.distanceTo(carPos);
+      const sx = (tempV.x * 0.5 + 0.5) * w;
+      const sy = (-tempV.y * 0.5 + 0.5) * h;
 
-      // KERNEL CLUTTER SHIELD:
-      // 1. 42 metreden uzaktaki araçların etiketleri gizlenir (Önden çekimde 20 etiketin üst üste binip çöp yığını oluşturmasını %100 engeller).
-      // 2. Yalnızca kameraya en yakın ve en net araçların isimleri gösterilir.
-      if (dist > 42) {
+      // Ekran dışı toleransı
+      if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) {
         cObj.labelEl.style.display = 'none';
         return;
       }
 
+      candidates.push({ cObj, dist, sx, sy });
+    });
+
+    // 2. Kameraya en YAKIN olan araçları önce sırala
+    candidates.sort((a, b) => a.dist - b.dist);
+
+    // 3. Ekran Uzayı Çakışma Önleyici (Screen-space Occlusion Shield):
+    // Önden veya arkadan çekimde aynı şeritte üst üste binen etiketleri gizle, çöp yığını oluşmasını %100 engelle
+    const placedBoxes = [];
+    if (leadScreen) {
+      placedBoxes.push({ x: leadScreen.x, y: leadScreen.y });
+    }
+
+    let renderedCount = 0;
+    const MAX_VISIBLE_LABELS = 6; // Ekranda aynı anda en fazla 6 net, kristal etiket!
+
+    for (const item of candidates) {
+      const { cObj, dist, sx, sy } = item;
+
+      if (renderedCount >= MAX_VISIBLE_LABELS) {
+        cObj.labelEl.style.display = 'none';
+        continue;
+      }
+
+      // Daha önce yerleştirilmiş bir etiketle çakışıyor mu? (Yatay 68px, düşey 32px güvenlik kutusu)
+      const overlaps = placedBoxes.some(box => 
+        Math.abs(sx - box.x) < 68 && Math.abs(sy - box.y) < 32
+      );
+
+      if (overlaps) {
+        cObj.labelEl.style.display = 'none';
+        continue;
+      }
+
+      // Çakışma yok: etiketi yerleştir
+      placedBoxes.push({ x: sx, y: sy });
+      renderedCount++;
+
       cObj.labelEl.style.display = 'flex';
-      const sx = (tempV.x * 0.5 + 0.5) * w;
-      const sy = (-tempV.y * 0.5 + 0.5) * h;
 
       // Doğrusal 3D Perspektif Küçülme (Araçla 1:1 orantılı küçülür, havada devasa kalmaz)
-      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.35, 1.0);
+      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.38, 1.0);
       
-      // 28 metreden sonra yumuşakça sönümlenir (fade-out)
-      const opacity = dist > 28 ? Math.max(0, 1 - (dist - 28) / 14) : 1;
+      // 26 metreden sonra yumuşakça sönümlenir (fade-out)
+      const opacity = dist > 26 ? Math.max(0, 1 - (dist - 26) / 12) : 1;
 
       // Dinamik Z-Index: Kameraya daha YAKIN olan aracın etiketi her zaman en üstte kalır!
       const zIndex = Math.max(1, Math.min(999, Math.round(1000 - dist * 10)));
@@ -1050,7 +1101,7 @@ class ConvoyManager {
       cObj.labelEl.style.zIndex = zIndex;
       cObj.labelEl.style.opacity = opacity.toFixed(2);
       cObj.labelEl.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) scale(${scale.toFixed(2)}) translate(-50%, -100%)`;
-    });
+    }
   }
 }
 

@@ -7,9 +7,10 @@ class HighwayEngine {
   constructor(scene) {
     this.scene = scene;
     this.roadSegments = [];
+    this.cityContainer = null;
     this.cityBlocks = [];
     this.confettiParticles = null;
-    this.scrollSpeed = 38.0; // Otoyol akış hızı (60 FPS kilitli)
+    this.scrollSpeed = 16.5; // Gerçekçi düğün konvoyu seyir hızı (~60 km/s) - 60 FPS kilit akış
 
     // Duman & Kıvılcım Parçacık Havuzu
     this.smokePool = [];
@@ -157,7 +158,7 @@ class HighwayEngine {
 
     this.cityLoopLength = blockLength;
 
-    // 5 Blok ile 625 metrelik kesintisiz bulvar (Sis sınırı 360m'yi tam kapsar, boşluk bırakmaz ve 60 FPS kilitler)
+    // 5 Blok ile 625 metrelik kesintisiz tekil şehir bulvarı
     const blockZPositions = [
       blockLength * 1.0,
       0,
@@ -166,8 +167,11 @@ class HighwayEngine {
       -blockLength * 3.0
     ];
 
-    // Eski bloklar varsa temizle
-    this.cityBlocks.forEach(b => this.scene.remove(b));
+    // Eski konteyner varsa sahneden temizle
+    if (this.cityContainer) {
+      this.scene.remove(this.cityContainer);
+    }
+    this.cityContainer = new THREE.Group();
     this.cityBlocks = [];
 
     blockZPositions.forEach(zPos => {
@@ -195,10 +199,14 @@ class HighwayEngine {
 
       blockGroup.add(clone);
       blockGroup.position.set(0, 0, zPos);
+      blockGroup.updateMatrix();
+      blockGroup.matrixAutoUpdate = false;
 
-      this.scene.add(blockGroup);
+      this.cityContainer.add(blockGroup);
       this.cityBlocks.push(blockGroup);
     });
+
+    this.scene.add(this.cityContainer);
   }
 
   // -------------------------------------------------------------
@@ -492,10 +500,11 @@ class HighwayEngine {
   emitSkidMarks(carId, worldPos, yawAngle = 0, isMotor = false) {
     // Aracın bulunduğu en yakın şehir cadde bloğunu bul
     if (!this.cityBlocks || this.cityBlocks.length === 0) return;
+    const containerZ = this.cityContainer ? this.cityContainer.position.z : 0;
     let bestBlock = this.cityBlocks[0];
-    let minDist = Math.abs(worldPos.z - bestBlock.position.z);
+    let minDist = Math.abs(worldPos.z - (bestBlock.position.z + containerZ));
     for (let i = 1; i < this.cityBlocks.length; i++) {
-      const d = Math.abs(worldPos.z - this.cityBlocks[i].position.z);
+      const d = Math.abs(worldPos.z - (this.cityBlocks[i].position.z + containerZ));
       if (d < minDist) {
         minDist = d;
         bestBlock = this.cityBlocks[i];
@@ -520,8 +529,9 @@ class HighwayEngine {
     offsets.forEach((off, idx) => {
       const wx = worldPos.x + off.x;
       const wz = worldPos.z + off.z;
+      const blockWorldZ = bestBlock.position.z + containerZ;
       const curLocalX = wx - bestBlock.position.x;
-      const curLocalZ = wz - bestBlock.position.z;
+      const curLocalZ = wz - blockWorldZ;
       const key = `${carId || 'c'}_${idx}`;
 
       const prev = this.lastWheelPositions[key];
@@ -574,18 +584,14 @@ class HighwayEngine {
   update(dt) {
     const moveDist = this.scrollSpeed * dt;
 
-    // 3D Şehir Bloklarını Akıcı Kaydır (625m kesintisiz sonsuz döngü)
+    // Tek Parça Monolitik Şehir Konteyneri (Sıfır Blok Işınlanması, Sıfır CPU Yeniden Hesaplama)
     const loopLen = this.cityLoopLength || 124.4835;
-    const numBlocks = this.cityBlocks.length || 5;
-    const wrapDistance = loopLen * numBlocks;
-    const minZ = -loopLen * 3.5;
-
-    this.cityBlocks.forEach(block => {
-      block.position.z -= moveDist;
-      if (block.position.z < minZ) {
-        block.position.z += wrapDistance;
+    if (this.cityContainer) {
+      this.cityContainer.position.z -= moveDist;
+      if (this.cityContainer.position.z <= -loopLen) {
+        this.cityContainer.position.z += loopLen;
       }
-    });
+    }
 
     // 3. Konfeti Salınımı (Kamera eksenini kirletmeden yumuşak süzülme)
     if (this.confettiParticles) {
