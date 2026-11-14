@@ -49,12 +49,12 @@ class HighwayEngine {
       metalness: 0.05
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.set(0, -0.05, -200);
+    groundMesh.position.set(0, -0.05, 0);
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
     // 2. Bulvar Altı Kesintisiz Asfalt Şeridi (Blok geçişlerinde 1 milimetre dahi mavi boşluk/delik oluşmasını engeller)
-    const roadRunwayGeo = new THREE.PlaneGeometry(32.0, 2400);
+    const roadRunwayGeo = new THREE.PlaneGeometry(36.0, 2400);
     roadRunwayGeo.rotateX(-Math.PI / 2);
     const roadRunwayMat = new THREE.MeshStandardMaterial({
       color: 0x181e28, // Asfalt ile birebir aynı koyu renk (asla mavi zemin görünmez)
@@ -62,7 +62,7 @@ class HighwayEngine {
       metalness: 0.05
     });
     const roadRunway = new THREE.Mesh(roadRunwayGeo, roadRunwayMat);
-    roadRunway.position.set(0, -0.015, -200);
+    roadRunway.position.set(0, -0.015, 0);
     roadRunway.receiveShadow = true;
     this.scene.add(roadRunway);
   }
@@ -158,8 +158,9 @@ class HighwayEngine {
 
     this.cityLoopLength = blockLength;
 
-    // 5 Blok ile 625 metrelik kesintisiz tekil şehir bulvarı
+    // 6 Blok ile 750 metrelik kesintisiz tekil şehir bulvarı (360 derece kesintisiz ufuk)
     const blockZPositions = [
+      blockLength * 2.0,
       blockLength * 1.0,
       0,
       -blockLength * 1.0,

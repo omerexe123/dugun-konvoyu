@@ -21,7 +21,12 @@ class ConvoyManager {
     this.focusedCarId = null;
     this.focusUntil = 0;
     this.idleTimer = 0;
-    this.currentCamPos = new THREE.Vector3(0, 6.2, 19.0);
+    this.latestJoinedCarId = null;
+    this.joinFocusCarId = null;
+    this.joinFocusUntil = 0;
+    this.joinFocusStart = 0;
+    this.joinFocusDuration = 6000;
+    this.currentCamPos = new THREE.Vector3(0, 5.5, 16.0);
     this.currentCamLook = new THREE.Vector3(0, 1.2, 0.0);
 
     // 60 FPS Sıfır GC Bellek & Layout Thrashing Önleme Havuzu
@@ -163,12 +168,12 @@ class ConvoyManager {
   spawnOrUpdateCar(user, rankIdx = 0) {
     let cObj = this.convoyCars[user.uniqueId];
 
-    // 3 Şeritli Prestijli ve Ferah Konvoy Dizilimi
-    // Şeritler: 0: Orta Şerit (0m), 1: Sağ Şerit (3.60m), 2: Sol Şerit (-3.60m)
-    const laneOffsetsX = [0, 3.60, -3.60];
+    // 3 Şeritli Ultra-Ferah Konvoy Dizilimi (Aynı kadrajda en fazla 3 araba kuralı)
+    // Şeritler: 0: Orta Şerit (0m), 1: Sağ Şerit (3.50m), 2: Sol Şerit (-3.50m)
+    const laneOffsetsX = [0, 3.50, -3.50];
     const targetX = laneOffsetsX[rankIdx % 3];
-    // Ferah ve görkemli konvoy mesafesi: Gelin arabası arkası 9.0m VIP koridoru, sıralar arası 12.5m ferah aralık, şerit kademesi 3.2m
-    const targetZ = -9.0 - Math.floor(rankIdx / 3) * 12.5 - (rankIdx % 3) * 3.2;
+    // Ultra-ferah takip mesafesi: Gelin arabası arkası 20m VIP koridoru, sıralar arası net 22m aralık!
+    const targetZ = -20.0 - rankIdx * 22.0;
 
     const isMotorcycle = user.vehicleType === 'motor';
 
@@ -199,8 +204,10 @@ class ConvoyManager {
       };
       group.position.copy(cObj.currentPos);
       this.convoyCars[user.uniqueId] = cObj;
+      this.latestJoinedCarId = user.uniqueId;
     }
 
+    this.latestJoinedCarId = user.uniqueId;
     cObj.rankIdx = rankIdx;
     cObj.user = user;
 
@@ -519,6 +526,21 @@ class ConvoyManager {
     }
   }
 
+  // Yeni Biri Katıldığında: Kamera arkada bekler, yeni araç kameranın önünden hızla geçip konvoya yerleşir!
+  triggerJoinFocus(uniqueId, durationMs = 6000) {
+    this.latestJoinedCarId = uniqueId;
+    this.joinFocusCarId = uniqueId;
+    this.joinFocusStart = Date.now();
+    this.joinFocusDuration = durationMs;
+    this.joinFocusUntil = Date.now() + durationMs;
+    const cObj = this.convoyCars[uniqueId];
+    if (cObj) {
+      cObj.joinFocusStart = Date.now();
+      cObj.joinFocusDuration = durationMs;
+      cObj.joinFocusUntil = Date.now() + durationMs;
+    }
+  }
+
   // Toplu Düğün Hedefi Kutlaması (Havai Fişek & Ekran Sarsıntısı)
   triggerMilestoneCelebration() {
     this.addTrauma(0.75);
@@ -544,57 +566,60 @@ class ConvoyManager {
       return;
     }
 
-    const leadZ = this.leadCar ? this.leadCar.position.z : 0;
+    const leadZ = this.leadCar ? this.leadCar.position.z : 6.0;
     const now = Date.now();
 
-    // Failsafe: currentCamPos veya currentCamLook NaN olursa anında varsayılana sıfırla (Mavi ekran koruması)
+    // Failsafe: currentCamPos veya currentCamLook NaN olursa anında güvenli konuma sıfırla (Mavi ekran koruması)
     if (!Number.isFinite(this.currentCamPos.x) || !Number.isFinite(this.currentCamPos.y) || !Number.isFinite(this.currentCamPos.z)) {
-      this.currentCamPos.set(0, 6.2, leadZ + 18.5);
+      this.currentCamPos.set(0, 4.8, leadZ - 14.0);
     }
     if (!Number.isFinite(this.currentCamLook.x) || !Number.isFinite(this.currentCamLook.y) || !Number.isFinite(this.currentCamLook.z)) {
-      this.currentCamLook.set(0, 1.3, leadZ - 12.0);
+      this.currentCamLook.set(0, 1.3, leadZ + 18.0);
     }
 
-    const isFocusActive = this.focusedCarId && (now < this.focusUntil) && this.convoyCars[this.focusedCarId];
+    const isGiftActive = this.giftFocusCarId && (now < this.giftFocusUntil) && this.convoyCars[this.giftFocusCarId];
+    const isJoinActive = !isGiftActive && this.joinFocusCarId && (now < this.joinFocusUntil) && this.convoyCars[this.joinFocusCarId];
 
-    // HEDİYE SİNEMATİK ODAĞI: Araba kameranın önünden yavaşça ve pürüzsüzce geçip gider!
-    if (isFocusActive) {
-      const fObj = this.convoyCars[this.focusedCarId];
+    // -----------------------------------------------------------------
+    // 1. ÖNCELİK: HEDİYE AKSİYON ODAĞI (En yüksek öncelik - Dinamik kahraman çekimi)
+    // -----------------------------------------------------------------
+    if (isGiftActive) {
+      const fObj = this.convoyCars[this.giftFocusCarId];
       const fPos = fObj.group.position;
       const totalDur = Math.max(1000, Number(this.giftFocusDuration) || 6500);
-      const startTime = Number(this.giftFocusStart) || (this.focusUntil - totalDur) || (now - 500);
+      const startTime = Number(this.giftFocusStart) || (this.giftFocusUntil - totalDur) || (now - 500);
       const elapsed = Math.max(0, now - startTime);
       let p = elapsed / totalDur;
       if (!Number.isFinite(p) || Number.isNaN(p)) p = 0.5;
       p = THREE.MathUtils.clamp(p, 0.0, 1.0);
 
       let targetCamPos, targetLookAt;
-      const sideOffset = fPos.x >= 0 ? 3.2 : -3.2;
 
-      if (p < 0.40) {
-        // 1. Aşama: Ön-Çapraz Takip - Kamera hafif yanda ve arkada, araca ve yola doğru odaklı
-        const subP = p / 0.40;
-        const camZ = fPos.z + 14.0 - subP * 4.0;
-        const camY = 2.8 + Math.sin(subP * Math.PI) * 0.50;
-        const camX = THREE.MathUtils.clamp(fPos.x + sideOffset, -4.5, 4.5);
+      if (p < 0.35) {
+        // Aşama 1: Yakın Arka-Çapraz Takip (Araç arkasından +Z akışına doğru dinamik takip)
+        const subP = p / 0.35;
+        const camZ = fPos.z - 11.5 + subP * 2.5;
+        const camY = 2.6 + Math.sin(subP * Math.PI) * 0.40;
+        const camX = THREE.MathUtils.clamp(fPos.x + (fPos.x >= 0 ? 2.4 : -2.4) * (1 - subP * 0.3), -4.5, 4.5);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x * 0.7, fPos.y + 1.1, fPos.z - 8.0);
-      } else if (p < 0.75) {
-        // 2. Aşama: Dinamik Yan Takip (Hero Side-Action Shot) - Asla arkadaki boş gökyüzüne bakmaz!
-        const subP = (p - 0.40) / 0.35;
-        const camZ = fPos.z + 9.0 - subP * 3.0;
-        const camY = 2.6 + Math.sin(subP * Math.PI) * 0.6;
-        const camX = THREE.MathUtils.clamp(fPos.x + THREE.MathUtils.lerp(sideOffset * 1.2, sideOffset * 0.8, subP), -4.8, 4.8);
+        targetLookAt = new THREE.Vector3(fPos.x * 0.5, fPos.y + 1.1, fPos.z + 14.0);
+      } else if (p < 0.72) {
+        // Aşama 2: Dinamik Yan Aksiyon (Hero Side-Action Shot - 60 FPS Paralel Otoyol Süzülüşü)
+        const subP = (p - 0.35) / 0.37;
+        const camZ = fPos.z - 4.5 + subP * 5.5;
+        const camY = 2.2 + Math.sin(subP * Math.PI) * 0.45;
+        const sideX = fPos.x >= 0 ? 3.5 : -3.5;
+        const camX = THREE.MathUtils.clamp(fPos.x + sideX, -5.0, 5.0);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x, fPos.y + 1.0, fPos.z - 12.0);
+        targetLookAt = new THREE.Vector3(fPos.x * 0.7, fPos.y + 1.05, fPos.z + (1 - subP) * 10.0 + 4.0);
       } else {
-        // 3. Aşama: Spor Arkadan Takip - Kesintisiz otoyol ve şehir silüetine doğru akıcı takip
-        const subP = (p - 0.75) / 0.25;
-        const camZ = fPos.z + 12.5 + subP * 2.0;
-        const camY = 3.2 + subP * 0.8;
-        const camX = THREE.MathUtils.clamp(fPos.x * 0.5 + Math.sin(subP * Math.PI) * 1.2, -4.2, 4.2);
+        // Aşama 3: Kesintisiz Arka Takibe Yumuşak Dönüş (Konvoya ve Şehre Doğru Açılan Geniş Kadraj)
+        const subP = (p - 0.72) / 0.28;
+        const camZ = fPos.z - 13.5 - subP * 1.5;
+        const camY = 3.4 + subP * 0.4;
+        const camX = THREE.MathUtils.clamp(fPos.x * 0.6, -3.8, 3.8);
         targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(fPos.x * 0.3, fPos.y + 1.1, fPos.z - 18.0);
+        targetLookAt = new THREE.Vector3(fPos.x * 0.3, fPos.y + 1.1, fPos.z + 18.0);
       }
 
       if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z)) {
@@ -606,55 +631,100 @@ class ConvoyManager {
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
-
       this.applyCameraShake(dt);
       return;
     }
 
-    // Otomatik Yönetmen Modu (cameraMode === 0) - Dinamik 4 Sinematik Çekim Döngüsü
-    if (this.cameraMode === 0) {
-      this.idleTimer += dt;
-      // 56 saniyelik tam döngü: Her 14 saniyede bir sinematik plan değişir
-      const cycleTime = this.idleTimer % 56;
-      let targetCamPos, targetLookAt;
+    // -----------------------------------------------------------------
+    // 2. ÖNCELİK: YENİ KATILAN FLYBY GEÇİŞİ
+    // Kamera aracın başlangıç noktasının arkasında alçakta sabit bekler,
+    // yeni araç hızla kameranın önünden geçip ileriye (konvoydaki yerine) fırlar!
+    // -----------------------------------------------------------------
+    if (isJoinActive) {
+      const jObj = this.convoyCars[this.joinFocusCarId];
+      const jPos = jObj.group.position;
+      const totalDur = Math.max(1000, Number(this.joinFocusDuration) || 6000);
+      const startTime = Number(this.joinFocusStart) || (this.joinFocusUntil - totalDur) || (now - 500);
+      const elapsed = Math.max(0, now - startTime);
+      let p = elapsed / totalDur;
+      if (!Number.isFinite(p) || Number.isNaN(p)) p = 0.5;
+      p = THREE.MathUtils.clamp(p, 0.0, 1.0);
 
-      if (cycleTime < 14) {
-        // Çekim 1: Arkadan Sallanan Sinematik Dron Takibi
-        const phase = cycleTime / 14;
-        const sway = Math.sin(this.idleTimer * 0.35) * 4.8;
-        const camY = 6.2 + Math.sin(this.idleTimer * 0.25) * 1.2;
-        targetCamPos = new THREE.Vector3(sway, camY, leadZ + 18.5);
-        targetLookAt = new THREE.Vector3(0, 1.3, leadZ - 12.0);
-      } else if (cycleTime < 28) {
-        // Çekim 2: Gelin Arabası Ön Karşılama (Low-Angle Hero Shot)
-        const phase = (cycleTime - 14) / 14;
-        const camX = 3.2 + Math.sin(this.idleTimer * 0.3) * 1.2;
-        const camY = 2.2 + Math.sin(phase * Math.PI) * 0.4;
-        targetCamPos = new THREE.Vector3(camX, camY, leadZ + 9.5);
-        targetLookAt = new THREE.Vector3(0, 1.25, leadZ - 2.0);
-      } else if (cycleTime < 42) {
-        // Çekim 3: Yan Şerit Takip Arabası (Side Tracking Car - 60 FPS Paralel Akış)
-        const phase = (cycleTime - 28) / 14;
-        const camX = -5.8;
-        const camY = 2.8 + Math.sin(this.idleTimer * 0.4) * 0.3;
-        const camZ = leadZ - 4.0 + Math.sin(phase * Math.PI) * 3.5;
-        targetCamPos = new THREE.Vector3(camX, camY, camZ);
-        targetLookAt = new THREE.Vector3(0.5, 1.2, leadZ - 14.0);
-      } else {
-        // Çekim 4: Yüksek Şehir Dron Uçuşu (Dinamik Açı, Net Konvoy Kadrajı)
-        const phase = (cycleTime - 42) / 14;
-        const camX = Math.sin(this.idleTimer * 0.2) * 5.0;
-        const camY = 8.5 + Math.sin(phase * Math.PI) * 1.5;
-        targetCamPos = new THREE.Vector3(camX, camY, leadZ + 16.0);
-        targetLookAt = new THREE.Vector3(0, 1.2, leadZ - 18.0);
+      // Kamera arkada alçakta durur: Araç kameranın tam önünden geçip gider!
+      const camZ = jObj.targetPos.z - 8.5;
+      const camY = 1.95;
+      const camX = THREE.MathUtils.clamp(jObj.targetPos.x + (jObj.targetPos.x >= 0 ? 1.6 : -1.6), -4.5, 4.5);
+      const targetCamPos = new THREE.Vector3(camX, camY, camZ);
+      const targetLookAt = new THREE.Vector3(jPos.x * 0.4, 1.25, jPos.z + 22.0);
+
+      if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z)) {
+        this.currentCamPos.lerp(targetCamPos, 0.060);
       }
-
-      this.currentCamPos.lerp(targetCamPos, 0.040);
-      this.currentCamLook.lerp(targetLookAt, 0.045);
+      if (Number.isFinite(targetLookAt.x) && Number.isFinite(targetLookAt.y) && Number.isFinite(targetLookAt.z)) {
+        this.currentCamLook.lerp(targetLookAt, 0.070);
+      }
 
       this.camera.position.copy(this.currentCamPos);
       this.camera.lookAt(this.currentCamLook);
+      this.applyCameraShake(dt);
+      return;
+    }
 
+    // -----------------------------------------------------------------
+    // 3. ÖNCELİK: OTOMATİK YÖNETMEN MODU (cameraMode === 0)
+    // Kural:
+    // a) Nadiren gelin arabasını önden çek (75s döngüde sadece ~8s, %10.6).
+    // b) Diğer zamanlarda en son katılana ARKADAN odaklan.
+    // c) Katılan yoksa gelin arabasının ARKA açısına gel.
+    // -----------------------------------------------------------------
+    if (this.cameraMode === 0) {
+      this.idleTimer += dt;
+      // 75 saniyelik tam döngü
+      const cycleTime = this.idleTimer % 75.0;
+      let targetCamPos, targetLookAt;
+
+      if (cycleTime >= 67.0) {
+        // a) NADİREN GELİN ARABASINI ÖNDEN ÇEK (Low-Angle Front Hero - 8 saniye)
+        const phase = (cycleTime - 67.0) / 8.0;
+        const camX = 2.8 + Math.sin(this.idleTimer * 0.3) * 1.1;
+        const camY = 2.1 + Math.sin(phase * Math.PI) * 0.35;
+        targetCamPos = new THREE.Vector3(camX, camY, leadZ + 9.5);
+        targetLookAt = new THREE.Vector3(0, 1.25, leadZ - 2.0);
+      } else {
+        // Normal Durum: Arkadan Takip
+        const latestCar = (this.latestJoinedCarId && this.convoyCars[this.latestJoinedCarId])
+          ? this.convoyCars[this.latestJoinedCarId]
+          : null;
+
+        if (latestCar) {
+          // b) EN SON KATILANA ARKA AÇIDAN ODAKLAN!
+          const lPos = latestCar.group.position;
+          const sway = Math.sin(this.idleTimer * 0.35) * 1.3;
+          const camZ = lPos.z - 14.5; // Kesin arkadan takip (-Z)
+          const camY = 3.6 + Math.sin(this.idleTimer * 0.25) * 0.40;
+          const camX = THREE.MathUtils.clamp(lPos.x * 0.65 + sway, -4.2, 4.2);
+          targetCamPos = new THREE.Vector3(camX, camY, camZ);
+          targetLookAt = new THREE.Vector3(lPos.x * 0.3, 1.25, lPos.z + 18.0);
+        } else {
+          // c) KATILAN YOKSA GELİN ARABASININ ARKA AÇISINA GEL!
+          const sway = Math.sin(this.idleTimer * 0.35) * 1.6;
+          const camZ = leadZ - 13.5; // Gelin arabası arkası (-Z)
+          const camY = 3.8 + Math.sin(this.idleTimer * 0.25) * 0.45;
+          const camX = THREE.MathUtils.clamp(sway, -3.8, 3.8);
+          targetCamPos = new THREE.Vector3(camX, camY, camZ);
+          targetLookAt = new THREE.Vector3(0, 1.3, leadZ + 16.0);
+        }
+      }
+
+      if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z)) {
+        this.currentCamPos.lerp(targetCamPos, 0.045);
+      }
+      if (Number.isFinite(targetLookAt.x) && Number.isFinite(targetLookAt.y) && Number.isFinite(targetLookAt.z)) {
+        this.currentCamLook.lerp(targetLookAt, 0.050);
+      }
+
+      this.camera.position.copy(this.currentCamPos);
+      this.camera.lookAt(this.currentCamLook);
       this.applyCameraShake(dt);
       return;
     }
@@ -662,36 +732,36 @@ class ConvoyManager {
     // Manuel Kamera Modları (1-8)
     switch (this.cameraMode) {
       case 1: // 🚘 Arka Konvoy İzometrik (Geniş & Ferah)
-        this.camera.position.set(0, 7.8, leadZ + 19.5);
-        this.camera.lookAt(0, 1.2, leadZ - 18.0);
+        this.camera.position.set(0, 7.2, leadZ - 18.0);
+        this.camera.lookAt(0, 1.2, leadZ + 20.0);
         break;
       case 2: // 👰 Gelin Arabası Ön Sinematik (Alçak Karşılama)
-        this.camera.position.set(0, 2.0, leadZ + 8.5);
-        this.camera.lookAt(0, 1.35, leadZ);
+        this.camera.position.set(2.8, 2.1, leadZ + 9.5);
+        this.camera.lookAt(0, 1.25, leadZ - 2.0);
         break;
       case 3: // 🚁 Helikopter / Kuşbakışı (Televizyon Yayını)
-        this.camera.position.set(0, 18.0, leadZ + 15.0);
-        this.camera.lookAt(0, 1.2, leadZ - 15.0);
+        this.camera.position.set(0, 19.0, leadZ - 12.0);
+        this.camera.lookAt(0, 1.2, leadZ + 18.0);
         break;
       case 4: // 🏎️ Yan Şerit Takip Arabası (Side Tracking)
-        this.camera.position.set(5.6, 2.6, leadZ - 3.0);
-        this.camera.lookAt(-0.5, 1.2, leadZ - 18.0);
+        this.camera.position.set(5.2, 2.6, leadZ - 4.0);
+        this.camera.lookAt(0, 1.2, leadZ + 16.0);
         break;
-      case 5: // 🎯 Konvoy İçi Aksiyon / Ön Takip
-        this.camera.position.set(0, 2.8, leadZ - 6.5);
-        this.camera.lookAt(0, 1.2, leadZ - 35.0);
+      case 5: // 🎯 Konvoy İçi Aksiyon / Arka Takip
+        this.camera.position.set(0, 2.8, leadZ - 8.5);
+        this.camera.lookAt(0, 1.2, leadZ + 30.0);
         break;
       case 6: // 📹 Yol Kenarı Hız Radarı (Drive-by)
-        this.camera.position.set(-6.5, 1.8, leadZ + 5.0);
-        this.camera.lookAt(0, 1.1, leadZ - 12.0);
+        this.camera.position.set(-6.2, 1.8, leadZ - 6.0);
+        this.camera.lookAt(0, 1.1, leadZ + 14.0);
         break;
       case 7: // ⚡ Makas & Selektör Kamerası
-        this.camera.position.set(3.4, 4.4, leadZ + 13.0);
-        this.camera.lookAt(0, 1.2, leadZ - 16.0);
+        this.camera.position.set(3.4, 4.2, leadZ - 12.0);
+        this.camera.lookAt(0, 1.2, leadZ + 16.0);
         break;
       case 8: // 🌌 Sinematik Şehir Panoraması (Ultra-Wide Skyline)
-        this.camera.position.set(-13.0, 15.0, leadZ + 26.0);
-        this.camera.lookAt(0, 2.0, leadZ - 25.0);
+        this.camera.position.set(-14.0, 15.0, leadZ - 24.0);
+        this.camera.lookAt(0, 2.0, leadZ + 30.0);
         break;
     }
 
@@ -746,9 +816,19 @@ class ConvoyManager {
         effectiveTargetZ += heroSurge;
       }
 
-      // ACC & Takip Mesafesi (Gelin arabası ve öndeki araçla güvenli mesafe)
+      // YENİ KATILAN ARAÇ FLYBY: Kameranın önünden hızla süzülüp konvoydaki yerine fırlar!
+      const activeJoinCar = (this.joinFocusCarId && now < this.joinFocusUntil) ? this.convoyCars[this.joinFocusCarId] : null;
+      if (activeJoinCar && cObj === activeJoinCar) {
+        const totalDur = this.joinFocusDuration || 6000;
+        const elapsed = Math.max(0, now - (this.joinFocusStart || (this.joinFocusUntil - totalDur)));
+        const p = Math.min(1.0, elapsed / totalDur);
+        const joinSurge = Math.sin(p * Math.PI) * 11.0;
+        effectiveTargetZ += joinSurge;
+      }
+
+      // ACC & Takip Mesafesi (Gelin arabası ve öndeki araçla ultra-ferah 20m takip mesafesi)
       if (this.leadCar && Math.abs(currentX - this.leadCar.position.x) < 2.2) {
-        const MIN_LEAD_DIST = 10.5;
+        const MIN_LEAD_DIST = 20.0;
         if (effectiveTargetZ > this.leadCar.position.z - MIN_LEAD_DIST) {
           effectiveTargetZ = this.leadCar.position.z - MIN_LEAD_DIST;
         }
@@ -762,7 +842,7 @@ class ConvoyManager {
         const lateralDist = Math.abs(currentX - otherX);
 
         if (lateralDist < 2.2 && otherZ > currentZ) {
-          const SAFE_FOLLOW_DIST = 9.5;
+          const SAFE_FOLLOW_DIST = 18.0;
           if (effectiveTargetZ > otherZ - SAFE_FOLLOW_DIST) {
             effectiveTargetZ = otherZ - SAFE_FOLLOW_DIST;
           }
@@ -775,7 +855,7 @@ class ConvoyManager {
       cObj.group.position.z = THREE.MathUtils.lerp(currentZ, effectiveTargetZ, lerpSpeed);
 
       // KESİN GÜVENLİK SINIRI: Hiçbir araç gelin arabasının önüne geçemez ve harita dışına fırlayamaz!
-      const maxAllowedZ = this.leadCar ? this.leadCar.position.z - 7.5 : -1.5;
+      const maxAllowedZ = this.leadCar ? this.leadCar.position.z - 16.0 : -10.0;
       if (cObj.group.position.z > maxAllowedZ) {
         cObj.group.position.z = maxAllowedZ;
       }
@@ -926,9 +1006,9 @@ class ConvoyManager {
         const dz = vB.group.position.z - vA.group.position.z;
         const absZ = Math.abs(dz);
 
-        // Yalnızca aynı şeritte (absX < 1.6m) ve tampon temasında (absZ < 5.0m) ayırma:
-        if (absX < 1.6 && absZ < 5.0) {
-          const pushBack = (5.0 - absZ) * 0.4;
+        // Yalnızca aynı şeritte (absX < 1.8m) ve tampon temasında (absZ < 10.0m) ayırma:
+        if (absX < 1.8 && absZ < 10.0) {
+          const pushBack = (10.0 - absZ) * 0.4;
           if (dz > 0) {
             // vB önde, vA arkada -> vA geriye çekilir
             vA.group.position.z -= pushBack;
@@ -1045,8 +1125,8 @@ class ConvoyManager {
 
       const dist = camera.position.distanceTo(carPos);
 
-      // KERNEL CLUTTER SHIELD: 38 metreden uzaktaki araçların etiketleri doğrudan cullanır
-      if (dist > 38) {
+      // KERNEL CLUTTER SHIELD: 35 metreden uzaktaki araçların etiketleri doğrudan cullanır (Aynı kadrajda en fazla 3 araba kuralı)
+      if (dist > 35) {
         cObj.labelEl.style.display = 'none';
         return;
       }
@@ -1084,7 +1164,7 @@ class ConvoyManager {
     }
 
     let renderedCount = 0;
-    const MAX_VISIBLE_LABELS = 6; // Ekranda aynı anda en fazla 6 net, kristal etiket!
+    const MAX_VISIBLE_LABELS = 3; // Ekranda aynı anda en fazla 3 net, kristal etiket! (Aynı kadrajda en fazla 3 araba kuralı)
 
     for (const item of candidates) {
       const { cObj, dist, sx, sy } = item;
@@ -1111,10 +1191,10 @@ class ConvoyManager {
       cObj.labelEl.style.display = 'flex';
 
       // Doğrusal 3D Perspektif Küçülme (Araçla 1:1 orantılı küçülür, havada devasa kalmaz)
-      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.38, 1.0);
+      const scale = THREE.MathUtils.clamp(16.0 / Math.max(16.0, dist), 0.40, 1.0);
       
-      // 26 metreden sonra yumuşakça sönümlenir (fade-out)
-      const opacity = dist > 26 ? Math.max(0, 1 - (dist - 26) / 12) : 1;
+      // 22 metreden sonra yumuşakça sönümlenir (fade-out)
+      const opacity = dist > 22 ? Math.max(0, 1 - (dist - 22) / 10) : 1;
 
       // Dinamik Z-Index: Kameraya daha YAKIN olan aracın etiketi her zaman en üstte kalır!
       const zIndex = Math.max(1, Math.min(999, Math.round(1000 - dist * 10)));

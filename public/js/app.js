@@ -518,6 +518,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? Object.keys(convoy.convoyCars).length);
         }
+        if (payload.user?.uniqueId) {
+          convoy.triggerJoinFocus(payload.user.uniqueId, 6000);
+        }
         if (payload.isNew) {
           convoy.showBanner(payload.message, 'banner-join', 3500);
         }
