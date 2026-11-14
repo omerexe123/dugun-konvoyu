@@ -82,6 +82,9 @@ class ConvoyManager {
     const cObj = this.convoyCars[uniqueId];
     if (!cObj) return;
 
+    // Arabadayken alta neon özelliği tamamen engellendi (yalnızca motosiklette çalışır)
+    if (!cObj.isMotor) return;
+
     let neon = cObj.group.userData.neon;
     if (!neon) {
       cObj.group.traverse(ch => {

@@ -396,11 +396,6 @@ const CarFactory = {
     // Lüks Multibeam LED Kristal Farlar (Mercedes far yuvasının tam içine gömülü)
     this.attachHeadlights(group, { isGelin: true, zFront: 2.26, yLight: 0.62, xOffsets: [-0.68, 0.68] });
 
-    // Asfalt Alt Neon Paketi (Gelin arabası asil altın sarısı parıltı ile başlar)
-    const neon = this.attachUnderglow(group, { isMotor: false });
-    neon.setColor(0xffd700);
-    neon.setEnabled(true);
-
     group.userData.isLeadCar = true;
     return group;
   },
@@ -485,9 +480,6 @@ const CarFactory = {
       yLight: config.hlY !== undefined ? config.hlY : (isSUV ? 0.78 : 0.58),
       xOffsets: config.hlX !== undefined ? [-config.hlX, config.hlX] : (isSUV ? [-0.80, 0.80] : [-0.70, 0.70])
     });
-
-    // Asfalt Alt Neon Paketi (Hediye ile açılabilir)
-    this.attachUnderglow(group, { isMotor: false });
 
     group.userData.tier = safeTier;
     group.userData.carName = config.name;
@@ -816,8 +808,11 @@ const CarFactory = {
   // ===========================================================
   attachUnderglow(group, options = {}) {
     const isMotor = options.isMotor || false;
-    const width = isMotor ? 0.70 : 1.95;
-    const length = isMotor ? 1.45 : 3.65;
+    // Arabadayken alta neon özelliği tamamen uçuruldu; yalnızca motosikletler için çalışır:
+    if (!isMotor) return null;
+
+    const width = 0.70;
+    const length = 1.45;
     const yGround = 0.025;
 
     const neonContainer = new THREE.Group();
