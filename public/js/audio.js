@@ -80,7 +80,19 @@ class ConvoyAudioEngine {
       { id: 'tiktok_lvbel_c5_dacia', title: 'Lvbel C5 - DACIA (Arabada Gaz Pedal)', category: 'TikTok Viral / Piyasa', url: 'audio/music/tiktok_lvbel_c5_dacia.mp3' },
       { id: 'tiktok_blok3_vur', title: 'BLOK3 - VUR (TikTok Trend)', category: 'TikTok Viral / Trap', url: 'audio/music/tiktok_blok3_vur.mp3' },
       { id: 'tiktok_ali_cabbar', title: 'Emir Can İğrek - Ali Cabbar', category: 'TikTok Viral / Düğün', url: 'audio/music/tiktok_ali_cabbar.mp3' },
-      { id: 'tiktok_montagem_diamante', title: 'Montagem Diamante Rosa - Drift Phonk', category: 'TikTok Viral / Phonk', url: 'audio/music/tiktok_montagem_diamante.mp3' }
+      { id: 'tiktok_montagem_diamante', title: 'Montagem Diamante Rosa - Drift Phonk', category: 'TikTok Viral / Phonk', url: 'audio/music/tiktok_montagem_diamante.mp3' },
+      { id: 'yt_caddebostan', title: 'LVBEL C5, AKDO - CADDEBOSTAN', category: 'Cadde / Trap', url: 'audio/music/yt_caddebostan.mp3' },
+      { id: 'yt_konsey', title: 'UZI, Arem Ozguc - KONSEY', category: 'Cadde / Trap', url: 'audio/music/yt_konsey.mp3' },
+      { id: 'yt_uzi_makina', title: 'UZI - Makina (Drift & Bass)', category: 'Cadde / Drill', url: 'audio/music/yt_uzi_makina.mp3' },
+      { id: 'yt_ankara_tatangalar', title: 'LVBEL C5, Ezhel - ANKARA TATANGALAR', category: 'Cadde / Trap', url: 'audio/music/yt_ankara_tatangalar.mp3' },
+      { id: 'yt_rs_otoban', title: 'RS OTOBAN (Cadde Makas)', category: 'Piyasa / Otoban', url: 'audio/music/yt_rs_otoban.mp3' },
+      { id: 'yt_blok3_baybay', title: 'BLOK3 - BAYBAY', category: 'TikTok / Trap', url: 'audio/music/yt_blok3_baybay.mp3' },
+      { id: 'yt_blok3_salla', title: 'BLOK3 - SALLA SALLA', category: 'TikTok / Trap', url: 'audio/music/yt_blok3_salla.mp3' },
+      { id: 'yt_havhavhav', title: 'LVBEL C5 - HAVHAVHAV', category: 'TikTok / Piyasa', url: 'audio/music/yt_havhavhav.mp3' },
+      { id: 'yt_kavak_bbs', title: 'KAVAK - BBS (V2.0 Remix)', category: 'Piyasa / Bass', url: 'audio/music/yt_kavak_bbs.mp3' },
+      { id: 'yt_batuflex_istanbul', title: 'BATUFLEX, CASH FLOW - İSTANBUL', category: 'Cadde / Rap', url: 'audio/music/yt_batuflex_istanbul.mp3' },
+      { id: 'yt_koksvl_nalaka', title: 'KÖK$VL - NALAKA', category: 'Cadde / Trap', url: 'audio/music/yt_koksvl_nalaka.mp3' },
+      { id: 'yt_motive_bye', title: 'MOTIVE & RECKOL - BYE', category: 'Cadde / Trap', url: 'audio/music/yt_motive_bye.mp3' }
     ];
 
     this.initDone = false;

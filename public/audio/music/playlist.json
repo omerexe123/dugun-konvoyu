@@ -94,5 +94,77 @@
     "url": "audio/music/tiktok_montagem_diamante.mp3",
     "title": "Montagem Diamante Rosa - Drift Phonk",
     "category": "TikTok Viral / Phonk"
+  },
+  {
+    "id": "yt_caddebostan",
+    "url": "audio/music/yt_caddebostan.mp3",
+    "title": "LVBEL C5, AKDO - CADDEBOSTAN",
+    "category": "Cadde / Trap"
+  },
+  {
+    "id": "yt_konsey",
+    "url": "audio/music/yt_konsey.mp3",
+    "title": "UZI, Arem Ozguc - KONSEY",
+    "category": "Cadde / Trap"
+  },
+  {
+    "id": "yt_uzi_makina",
+    "url": "audio/music/yt_uzi_makina.mp3",
+    "title": "UZI - Makina (Drift & Bass)",
+    "category": "Cadde / Drill"
+  },
+  {
+    "id": "yt_ankara_tatangalar",
+    "url": "audio/music/yt_ankara_tatangalar.mp3",
+    "title": "LVBEL C5, Ezhel - ANKARA TATANGALAR",
+    "category": "Cadde / Trap"
+  },
+  {
+    "id": "yt_rs_otoban",
+    "url": "audio/music/yt_rs_otoban.mp3",
+    "title": "RS OTOBAN (Cadde Makas)",
+    "category": "Piyasa / Otoban"
+  },
+  {
+    "id": "yt_blok3_baybay",
+    "url": "audio/music/yt_blok3_baybay.mp3",
+    "title": "BLOK3 - BAYBAY",
+    "category": "TikTok / Trap"
+  },
+  {
+    "id": "yt_blok3_salla",
+    "url": "audio/music/yt_blok3_salla.mp3",
+    "title": "BLOK3 - SALLA SALLA",
+    "category": "TikTok / Trap"
+  },
+  {
+    "id": "yt_havhavhav",
+    "url": "audio/music/yt_havhavhav.mp3",
+    "title": "LVBEL C5 - HAVHAVHAV",
+    "category": "TikTok / Piyasa"
+  },
+  {
+    "id": "yt_kavak_bbs",
+    "url": "audio/music/yt_kavak_bbs.mp3",
+    "title": "KAVAK - BBS (V2.0 Remix)",
+    "category": "Piyasa / Bass"
+  },
+  {
+    "id": "yt_batuflex_istanbul",
+    "url": "audio/music/yt_batuflex_istanbul.mp3",
+    "title": "BATUFLEX, CASH FLOW - İSTANBUL",
+    "category": "Cadde / Rap"
+  },
+  {
+    "id": "yt_koksvl_nalaka",
+    "url": "audio/music/yt_koksvl_nalaka.mp3",
+    "title": "KÖK$VL - NALAKA",
+    "category": "Cadde / Trap"
+  },
+  {
+    "id": "yt_motive_bye",
+    "url": "audio/music/yt_motive_bye.mp3",
+    "title": "MOTIVE & RECKOL - BYE",
+    "category": "Cadde / Trap"
   }
 ]
