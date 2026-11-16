@@ -309,7 +309,7 @@ class ConvoyManager {
     if (!cObj || cObj.isDrifting) return;
 
     cObj.isDrifting = true;
-    this.focusCar(uniqueId, 6500);
+    this.focusCar(uniqueId, 5000);
 
     // Drift girişinde sinematik kamera darbesi (Screen Trauma)
     this.cameraTrauma = Math.min(1.0, (this.cameraTrauma || 0) + 0.35);
@@ -517,8 +517,8 @@ class ConvoyManager {
     }
   }
 
-  // Hediye Geldiğinde Kamerayı Odakla ve Mesafeyi Genişlet
-  triggerGiftFocus(uniqueId, durationMs = 7000) {
+  // Hediye Geldiğinde Kamerayı Odakla (Standart 5 Saniye)
+  triggerGiftFocus(uniqueId, durationMs = 5000) {
     this.addTrauma(0.40);
     this.focusCar(uniqueId, durationMs);
     this.giftFocusCarId = uniqueId;
@@ -533,8 +533,8 @@ class ConvoyManager {
     }
   }
 
-  // Yeni Biri Katıldığında: Kamera arkada bekler, yeni araç kameranın önünden hızla geçip konvoya yerleşir!
-  triggerJoinFocus(uniqueId, durationMs = 6000) {
+  // Yeni Biri Katıldığında: Kamera arkada bekler ve araca tam 5 saniye odaklanır!
+  triggerJoinFocus(uniqueId, durationMs = 5000) {
     this.latestJoinedCarId = uniqueId;
     this.joinFocusCarId = uniqueId;
     this.joinFocusStart = Date.now();

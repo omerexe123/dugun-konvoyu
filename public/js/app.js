@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? Object.keys(convoy.convoyCars).length);
         }
         if (payload.user?.uniqueId) {
-          convoy.triggerJoinFocus(payload.user.uniqueId, 6000);
+          convoy.triggerJoinFocus(payload.user.uniqueId, 5000);
         }
         if (payload.isNew) {
           convoy.showBanner(payload.message, 'banner-join', 3500);
@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.triggerDrift(payload.user.uniqueId);
         addLog(payload.message, 'log-drift');
         break;
@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.triggerBurnout(payload.user.uniqueId);
         addLog(payload.message, 'log-burnout');
         break;
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 8000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.showBanner(payload.message, 'banner-motor', 5000, payload.giftIcon || 'images/gifts/rosa.webp');
         addLog(payload.message, 'log-motor');
         break;
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 7500);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.triggerWheelie(payload.user.uniqueId);
         addLog(payload.message, 'log-wheelie');
         break;
@@ -610,7 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 13000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.showBanner(payload.message, 'banner-upgrade', 5000);
         if (audio) audio.playUpgradeFanfare();
         addLog(payload.message, 'log-upgrade');
@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (payload.user) {
           convoy.spawnOrUpdateCar(payload.user, payload.rankIdx ?? 0);
         }
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 14000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.showBanner(payload.message, 'banner-share', 6000);
         convoy.triggerSelektor(payload.user?.uniqueId);
         if (audio) audio.playWeddingHorn();
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
 
       case 'EVENT_GALAXY_FESTIVAL':
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 28000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         if (audio) audio.startDavulZurnaTheme(15000);
         convoy.showBanner(payload.message, 'banner-galaxy', 8000, payload.giftIcon || 'images/gifts/galaxy.webp');
         addLog(payload.message, 'log-galaxy');
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'EVENT_NEW_BRIDE':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 15000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/swan.webp');
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');
@@ -669,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'EVENT_NEW_GROOM':
         convoy.updateLeadCarCouple(payload.brideName, payload.groomName);
-        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 18000);
+        if (payload.user?.uniqueId) convoy.triggerGiftFocus(payload.user.uniqueId, payload.durationMs || 5000);
         convoy.showBanner(payload.message, 'banner-couple', 6000, payload.giftIcon || 'images/gifts/lion.webp');
         if (audio) audio.startDavulZurnaTheme(10000);
         addLog(payload.message, 'log-couple');

@@ -634,20 +634,14 @@ function handleUserShare(uniqueId, nickname, avatar) {
     user,
     rankIdx: Math.max(0, rankIdx),
     sortedConvoy: sorted,
-    durationMs: 14000,
+    durationMs: 5000,
     message: `📢🔥 @${user.nickname} YAYINI PAYLAŞTI! EN ÖNE GEÇİYOR! (Paylaşım: ${user.shareCount}x - Sıra: #${rankIdx + 1})`
   });
 }
 
-// Hediyenin büyüklüğüne göre dinamik kamera odaklanma süresi (ms)
+// Hediye kamera odaklanma süresi: Kesin ve standart 5 saniye (5000ms)
 function getGiftFocusDuration(diamondCount = 1) {
-  const coins = Number(diamondCount) || 1;
-  if (coins >= 1000) return 28000; // Galaksi / Evren -> 28 saniye VIP yayın odağı
-  if (coins >= 500) return 22000;  // Aslan / Ejderha -> 22 saniye
-  if (coins >= 99) return 17000;   // Şapka & Bıyık (Damat) -> 17 saniye
-  if (coins >= 20) return 13000;   // Araba Yükseltme / Parfüm (Gelin) -> 13 saniye
-  if (coins >= 5) return 9500;     // Parmak Kalp / Orta hediye -> 9.5 saniye
-  return 7500;                     // 1 coinlik hediyeler (Gül, GG vb.) -> 7.5 saniye
+  return 5000;
 }
 
 // SADECE HEDİYE İLE ARABA YÜKSELTME FONKSİYONU
@@ -736,7 +730,7 @@ function handleBecomeBride(uniqueId, nickname, avatar, giftLabel = 'Perfume (20�
     user,
     brideName: nickname,
     groomName: gameState.groomName,
-    durationMs: 15000,
+    durationMs: 5000,
     giftIcon: 'images/gifts/perfume.webp',
     giftName: giftLabel,
     message: `👰👑 ${nickname} ${giftLabel} GÖNDEREREK YENİ GELİN OLDU! MERCEDES GELİN TAHTINA GEÇTİ!`
@@ -756,7 +750,7 @@ function handleBecomeGroom(uniqueId, nickname, avatar, giftLabel = 'Hat and Must
     user,
     brideName: gameState.brideName,
     groomName: nickname,
-    durationMs: 18000,
+    durationMs: 5000,
     giftIcon: 'images/gifts/hat_mustache.webp',
     giftName: giftLabel,
     message: `🤵👑 ${nickname} ${giftLabel} GÖNDEREREK YENİ DAMAT OLDU! MERCEDES DAMAT TAHTINA GEÇTİ!`
