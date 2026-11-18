@@ -1,170 +1,260 @@
 [
   {
-    "id": "dugun_kara_uzum_habbesi",
-    "url": "audio/music/dugun_kara_uzum_habbesi.mp3",
-    "title": "İbrahim Tatlıses - Kara Üzüm Habbesi",
-    "category": "Düğün / Halay"
+    "id": "yt_kavak_bia",
+    "url": "audio/music/yt_kavak_bia.mp3",
+    "title": "KAVAK - BIA",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "dugun_erik_dali",
-    "url": "audio/music/dugun_erik_dali.mp3",
-    "title": "Ömer Faruk Bostan - Erik Dalı",
-    "category": "Düğün / Oyun Havası"
+    "id": "yt_kavak_izler_kalirsin",
+    "url": "audio/music/yt_kavak_izler_kalirsin.mp3",
+    "title": "KAVAK - İZLER KALIRSIN",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "dugun_halay_potpori",
-    "url": "audio/music/dugun_halay_potpori.mp3",
-    "title": "Coşkulu Davul Zurna & Halay Potpori",
-    "category": "Düğün / Halay"
+    "id": "yt_lvbelc5_mermer",
+    "url": "audio/music/yt_lvbelc5_mermer.mp3",
+    "title": "LVBELC5 - MERMER",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "dugun_ankara_kostak",
-    "url": "audio/music/dugun_ankara_kostak.mp3",
-    "title": "Ankara Oyun Havası (Kostak & Fidayda)",
-    "category": "Düğün / Ankara Havası"
+    "id": "yt_dj_aciz_noche_loca",
+    "url": "audio/music/yt_dj_aciz_noche_loca.mp3",
+    "title": "DJ ACIZ - Noche Loca",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "dugun_ismail_yk_8080",
-    "url": "audio/music/dugun_ismail_yk_8080.mp3",
-    "title": "İsmail YK - 80 80 160 (Düğün Mix)",
-    "category": "Düğün / Oyun Havası"
+    "id": "yt_lvbelc5_peki_peki",
+    "url": "audio/music/yt_lvbelc5_peki_peki.mp3",
+    "title": "LVBELC5 - PEKİ PEKİ",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "pop_tarkan_yolla",
-    "url": "audio/music/pop_tarkan_yolla.mp3",
-    "title": "Tarkan - Yolla",
-    "category": "Türkçe Pop"
+    "id": "yt_dumrul_topic_of_off",
+    "url": "audio/music/yt_dumrul_topic_of_off.mp3",
+    "title": "Dumrul - OF OFF",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "pop_cagla_saz_mi_caz_mi",
-    "url": "audio/music/pop_cagla_saz_mi_caz_mi.mp3",
-    "title": "Çağla - Saz Mı Caz Mı",
-    "category": "Türkçe Pop"
+    "id": "yt_lvbelc5_tak_tak_tak",
+    "url": "audio/music/yt_lvbelc5_tak_tak_tak.mp3",
+    "title": "LVBELC5 - TAK TAK TAK",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "pop_simge_askin_olayim",
-    "url": "audio/music/pop_simge_askin_olayim.mp3",
-    "title": "Simge - Aşkın Olayım",
-    "category": "Türkçe Pop"
+    "id": "yt_wag1_topic_hace_calor",
+    "url": "audio/music/yt_wag1_topic_hace_calor.mp3",
+    "title": "WAG1 - Hace Calor",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "pop_cevapsiz_cinlama",
-    "url": "audio/music/pop_cevapsiz_cinlama.mp3",
-    "title": "Aleyna Tilki & Emrah Karaduman - Cevapsız Çınlama",
-    "category": "Türkçe Pop"
+    "id": "yt_jeff_huqqa",
+    "url": "audio/music/yt_jeff_huqqa.mp3",
+    "title": "JEFF - HUQQA",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "piyasa_ceza_yerli_plaka",
-    "url": "audio/music/piyasa_ceza_yerli_plaka.mp3",
-    "title": "Ceza - Yerli Plaka (Cadde & Drift)",
-    "category": "Piyasa / Hip-Hop"
+    "id": "yt_lvbelc5_ha_ha_ha_ha",
+    "url": "audio/music/yt_lvbelc5_ha_ha_ha_ha.mp3",
+    "title": "LVBELC5 - HA HA HA HA",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "piyasa_ben_fero_demet",
-    "url": "audio/music/piyasa_ben_fero_demet.mp3",
-    "title": "Ben Fero - Demet Akalın (Piyasa Trap)",
-    "category": "Piyasa / Trap"
+    "id": "yt_djezja_safi_tmm",
+    "url": "audio/music/yt_djezja_safi_tmm.mp3",
+    "title": "DJEZJA - SAFI / TMM",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "piyasa_drift_phonk",
-    "url": "audio/music/piyasa_drift_phonk.mp3",
-    "title": "Kontraa - Aggressive Drift Phonk",
-    "category": "Piyasa / Drift Phonk"
+    "id": "yt_dethron_topic_cozemezler_2_0",
+    "url": "audio/music/yt_dethron_topic_cozemezler_2_0.mp3",
+    "title": "Dethron - Çözemezler 2.0",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "tiktok_lvbel_c5_dacia",
-    "url": "audio/music/tiktok_lvbel_c5_dacia.mp3",
-    "title": "Lvbel C5 - DACIA (Arabada Gaz Pedal)",
-    "category": "TikTok Viral / Piyasa"
+    "id": "yt_organize34_oguz_alper_oktem",
+    "url": "audio/music/yt_organize34_oguz_alper_oktem.mp3",
+    "title": "ORGANIZE34 - OGUZ ALPER OKTEM",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "tiktok_blok3_vur",
-    "url": "audio/music/tiktok_blok3_vur.mp3",
-    "title": "BLOK3 - VUR (TikTok Trend)",
-    "category": "TikTok Viral / Trap"
+    "id": "yt_era7capone_pist",
+    "url": "audio/music/yt_era7capone_pist.mp3",
+    "title": "Era7capone - PİŞT",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "tiktok_ali_cabbar",
-    "url": "audio/music/tiktok_ali_cabbar.mp3",
-    "title": "Emir Can İğrek - Ali Cabbar",
-    "category": "TikTok Viral / Düğün"
+    "id": "yt_batuflex_i_wanna_dance",
+    "url": "audio/music/yt_batuflex_i_wanna_dance.mp3",
+    "title": "Batuflex - I WANNA DANCE",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "tiktok_montagem_diamante",
-    "url": "audio/music/tiktok_montagem_diamante.mp3",
-    "title": "Montagem Diamante Rosa - Drift Phonk",
-    "category": "TikTok Viral / Phonk"
+    "id": "yt_lvbelc5_dubaiiiiii",
+    "url": "audio/music/yt_lvbelc5_dubaiiiiii.mp3",
+    "title": "LVBELC5 - dubaiiiiii",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_caddebostan",
-    "url": "audio/music/yt_caddebostan.mp3",
-    "title": "LVBEL C5, AKDO - CADDEBOSTAN",
-    "category": "Cadde / Trap"
+    "id": "yt_motive_restoran",
+    "url": "audio/music/yt_motive_restoran.mp3",
+    "title": "Motive - RESTORAN",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_konsey",
-    "url": "audio/music/yt_konsey.mp3",
-    "title": "UZI, Arem Ozguc - KONSEY",
-    "category": "Cadde / Trap"
+    "id": "yt_lvbelc5_havhavhav",
+    "url": "audio/music/yt_lvbelc5_havhavhav.mp3",
+    "title": "LVBELC5 - HAVHAVHAV",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_uzi_makina",
-    "url": "audio/music/yt_uzi_makina.mp3",
-    "title": "UZI - Makina (Drift & Bass)",
-    "category": "Cadde / Drill"
+    "id": "yt_akdo_topic_submariner",
+    "url": "audio/music/yt_akdo_topic_submariner.mp3",
+    "title": "AKDO - SUBMARINER",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_ankara_tatangalar",
-    "url": "audio/music/yt_ankara_tatangalar.mp3",
-    "title": "LVBEL C5, Ezhel - ANKARA TATANGALAR",
-    "category": "Cadde / Trap"
+    "id": "yt_djezja_nardo_rs",
+    "url": "audio/music/yt_djezja_nardo_rs.mp3",
+    "title": "DJEZJA - Nardo RS",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_rs_otoban",
-    "url": "audio/music/yt_rs_otoban.mp3",
-    "title": "RS OTOBAN (Cadde Makas)",
-    "category": "Piyasa / Otoban"
+    "id": "yt_russ_millions_international",
+    "url": "audio/music/yt_russ_millions_international.mp3",
+    "title": "Russ Millions - International",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_blok3_baybay",
-    "url": "audio/music/yt_blok3_baybay.mp3",
-    "title": "BLOK3 - BAYBAY",
-    "category": "TikTok / Trap"
+    "id": "yt_cash_flow_topic_9mm",
+    "url": "audio/music/yt_cash_flow_topic_9mm.mp3",
+    "title": "Cash Flow - 9mm",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_blok3_salla",
-    "url": "audio/music/yt_blok3_salla.mp3",
-    "title": "BLOK3 - SALLA SALLA",
-    "category": "TikTok / Trap"
+    "id": "yt_summer_cem_flex_so_hard_rmx",
+    "url": "audio/music/yt_summer_cem_flex_so_hard_rmx.mp3",
+    "title": "Summer Cem - FLEX SO HARD RMX",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_havhavhav",
-    "url": "audio/music/yt_havhavhav.mp3",
-    "title": "LVBEL C5 - HAVHAVHAV",
-    "category": "TikTok / Piyasa"
+    "id": "yt_elmusto_kaynanam",
+    "url": "audio/music/yt_elmusto_kaynanam.mp3",
+    "title": "ELMUSTO - Kaynanam",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_kavak_bbs",
-    "url": "audio/music/yt_kavak_bbs.mp3",
-    "title": "KAVAK - BBS (V2.0 Remix)",
-    "category": "Piyasa / Bass"
+    "id": "yt_lvbelc5_shot",
+    "url": "audio/music/yt_lvbelc5_shot.mp3",
+    "title": "LVBELC5 - SHOT",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_batuflex_istanbul",
-    "url": "audio/music/yt_batuflex_istanbul.mp3",
-    "title": "BATUFLEX, CASH FLOW - İSTANBUL",
-    "category": "Cadde / Rap"
+    "id": "yt_elmusto_dale_don_dale",
+    "url": "audio/music/yt_elmusto_dale_don_dale.mp3",
+    "title": "ELMUSTO - Dale Don Dale",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_koksvl_nalaka",
-    "url": "audio/music/yt_koksvl_nalaka.mp3",
-    "title": "KÖK$VL - NALAKA",
-    "category": "Cadde / Trap"
+    "id": "yt_ati242_maybach",
+    "url": "audio/music/yt_ati242_maybach.mp3",
+    "title": "Ati242 - Maybach",
+    "category": "Piyasa / Cadde"
   },
   {
-    "id": "yt_motive_bye",
-    "url": "audio/music/yt_motive_bye.mp3",
-    "title": "MOTIVE & RECKOL - BYE",
-    "category": "Cadde / Trap"
+    "id": "yt_jeff_puta",
+    "url": "audio/music/yt_jeff_puta.mp3",
+    "title": "JEFF - pUTA",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_aslan_terbiyecisi_topic_look_at_me_2_0",
+    "url": "audio/music/yt_aslan_terbiyecisi_topic_look_at_me_2_0.mp3",
+    "title": "Aslan Terbiyecisi - Look At Me 2.0",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_era7capone_intihar",
+    "url": "audio/music/yt_era7capone_intihar.mp3",
+    "title": "Era7capone - İNTİHAR",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_cakal_jet_baba",
+    "url": "audio/music/yt_cakal_jet_baba.mp3",
+    "title": "Cakal - JET BABA",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_poizi_cikar_biri_karsima",
+    "url": "audio/music/yt_poizi_cikar_biri_karsima.mp3",
+    "title": "Poizi - ÇIKAR BİRİ KARŞIMA",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_djezja_ich_liebe_dich",
+    "url": "audio/music/yt_djezja_ich_liebe_dich.mp3",
+    "title": "DJEZJA - Ich Liebe Dich",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_batuflex_aktiv",
+    "url": "audio/music/yt_batuflex_aktiv.mp3",
+    "title": "Batuflex - AKTIV",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_era7capone_bye_bye",
+    "url": "audio/music/yt_era7capone_bye_bye.mp3",
+    "title": "Era7capone - BYE BYE",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_lvbelc5_izledi_mahalle",
+    "url": "audio/music/yt_lvbelc5_izledi_mahalle.mp3",
+    "title": "LVBELC5 - İZLEDİ MAHALLE",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_batuflex_donuyo_basim",
+    "url": "audio/music/yt_batuflex_donuyo_basim.mp3",
+    "title": "Batuflex - Dönüyo Başım",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_aykut_closer_up_in",
+    "url": "audio/music/yt_aykut_closer_up_in.mp3",
+    "title": "Aykut Closer - Up İn",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_lvbelc5_dogustan_beri_hakliyim_tmm",
+    "url": "audio/music/yt_lvbelc5_dogustan_beri_hakliyim_tmm.mp3",
+    "title": "LVBELC5 - DOĞUŞTAN BERİ HAKLIYIM (tmm)",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_kavak_fis",
+    "url": "audio/music/yt_kavak_fis.mp3",
+    "title": "KAVAK - fıs?",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_ati242_shoote_shoote",
+    "url": "audio/music/yt_ati242_shoote_shoote.mp3",
+    "title": "Ati242 - Shoote Shoote",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_akdo_topic_doyamadim",
+    "url": "audio/music/yt_akdo_topic_doyamadim.mp3",
+    "title": "AKDO - DOYAMADIM",
+    "category": "Piyasa / Cadde"
+  },
+  {
+    "id": "yt_kavak_hitman",
+    "url": "audio/music/yt_kavak_hitman.mp3",
+    "title": "KAVAK - HITMAN",
+    "category": "Piyasa / Cadde"
   }
 ]
