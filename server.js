@@ -1219,6 +1219,16 @@ wss.on('connection', ws => {
   });
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    const nextPort = Number(PORT) + 1;
+    console.warn(`⚠️ [Düğün Konvoyu] Port ${PORT} başka bir süreç tarafından kullanılıyor. Alternatif port deneniyor: ${nextPort}`);
+    server.listen(nextPort, '0.0.0.0');
+  } else {
+    console.error('[Sunucu Hatası]', err);
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   const os = require('os');
   const nets = os.networkInterfaces();

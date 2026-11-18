@@ -44,7 +44,17 @@ class ConvoyAudioEngine {
 
     // URL Parametreleri ve OBS Otomatik Tespiti
     const urlParams = new URLSearchParams(window.location.search);
-    this.isObs = (urlParams.get('obs') === '1' || navigator.userAgent.includes('OBS') || navigator.userAgent.includes('Streamlabs') || Boolean(window.obsstudio));
+    this.isObs = (
+      urlParams.get('obs') === '1' ||
+      urlParams.get('stream') === '1' ||
+      urlParams.get('autoplay') === '1' ||
+      navigator.userAgent.includes('OBS') ||
+      navigator.userAgent.includes('Streamlabs') ||
+      navigator.userAgent.includes('TikTok') ||
+      navigator.userAgent.includes('LiveStudio') ||
+      Boolean(window.obsstudio) ||
+      Boolean(window.__obs_studio)
+    );
 
     if (urlParams.get('nomusic') === '1' || urlParams.get('mute') === '1') {
       this.muted = true;
@@ -52,14 +62,17 @@ class ConvoyAudioEngine {
     }
 
     // Açılışta başka bir sekme/istemci çalıyor mu kontrol et:
-    try {
-      const lastHb = parseInt(localStorage.getItem('convoy_music_heartbeat') || '0', 10);
-      const masterTab = localStorage.getItem('convoy_music_master_tab');
-      if (masterTab && masterTab !== this.tabId && (Date.now() - lastHb < 5000)) {
-        this.isRemoteMuted = true;
-        console.log('[ConvoyAudio] Başka bir sekme/OBS zaten müzik çalıyor. Bu sekme susturuldu.');
-      }
-    } catch (e) {}
+    // OBS YAYINI ASLA SUSTURULAMAZ - YAYIN HER ZAMAN ÖNCELİKLİDİR!
+    if (!this.isObs) {
+      try {
+        const lastHb = parseInt(localStorage.getItem('convoy_music_heartbeat') || '0', 10);
+        const masterTab = localStorage.getItem('convoy_music_master_tab');
+        if (masterTab && masterTab !== this.tabId && (Date.now() - lastHb < 5000)) {
+          this.isRemoteMuted = true;
+          console.log('[ConvoyAudio] Başka bir sekme/OBS zaten müzik çalıyor. Bu sekme susturuldu.');
+        }
+      } catch (e) {}
+    }
 
     this._initCrossTabSync();
 
@@ -117,31 +130,32 @@ class ConvoyAudioEngine {
     // İlk kullanıcı etkileşiminde ses bağlamını ve müziği uyandır
     const unlockAudio = () => {
       this.init();
-      // Başka sekme veya OBS zaten çalıyorsa veya susturulduysa ASLA ikinci müzik başlatma!
-      if (this.isAnotherClientActive() || this.isRemoteMuted || this.muted || this.musicPlaying) {
-        console.log('[ConvoyAudio] unlockAudio: Müzik kilitli, başka istemci çalıyor.');
-        return;
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
       }
-      this.startMusic(false);
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('keydown', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
+      this._ensureMediaElementSource();
+      if (this.muted) return;
+      if (!this.musicPlaying) {
+        this.startMusic(true);
+      }
     };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('keydown', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
+    ['click', 'keydown', 'touchstart', 'pointerdown'].forEach(evt => {
+      window.addEventListener(evt, unlockAudio, { passive: true });
+    });
 
     // OBS / Yayın Modu: OBS Browser Source içinde doğrudan ses motorunu tetikle
     if (this.isObs || urlParams.get('autoplay') === '1') {
       const tryAutoStart = () => {
         this.init();
-        if (!this.musicPlaying && !this.muted && !this.isAnotherClientActive()) {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        this._ensureMediaElementSource();
+        if (!this.musicPlaying && !this.muted) {
           this.startMusic(true);
         }
       };
-      setTimeout(tryAutoStart, 300);
-      setTimeout(tryAutoStart, 1000);
-      setTimeout(tryAutoStart, 2500);
+      [100, 400, 1000, 2500, 5000].forEach(delay => setTimeout(tryAutoStart, delay));
     }
   }
 
@@ -471,9 +485,27 @@ class ConvoyAudioEngine {
     } catch (e) {}
   }
 
-  // --- ARKA PLAN MÜZİK MOTORU (TEKİL MASTER & ÇOKLU SEKME KORUMALI) ---
+  // --- ARKA PLAN MÜZİK MOTORU (TEKİL MASTER & OBS ÖNCELİKLİ YAYIN SESİ) ---
+
+  _ensureMediaElementSource() {
+    if (this._mediaSourceConnected || !this.ctx || !this.musicAudio) return;
+    try {
+      this.musicAudio.crossOrigin = 'anonymous';
+      const source = this.ctx.createMediaElementSource(this.musicAudio);
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.setValueAtTime(this.muted ? 0 : this.musicVolume, this.ctx.currentTime);
+      source.connect(this.musicGain);
+      this.musicGain.connect(this.ctx.destination);
+      this._mediaSourceConnected = true;
+      console.log('[ConvoyAudio] Müzik WebAudio grafiğine başarıyla bağlandı (OBS mikseri ile %100 uyumlu).');
+    } catch (e) {
+      console.warn('[ConvoyAudio] MediaElementSource uyarısı:', e.message);
+    }
+  }
 
   isAnotherClientActive() {
+    // OBS YAYINI ASLA SUSTURULAMAZ: Stream her zaman müzik çalmalıdır!
+    if (this.isObs) return false;
     if (this.isRemoteMuted) return true;
     try {
       const lastHb = parseInt(localStorage.getItem('convoy_music_heartbeat') || '0', 10);
@@ -513,7 +545,7 @@ class ConvoyAudioEngine {
     }
   }
 
-  // Çoklu sekme ve pencere senkronizasyonu: Aynı anda yalnızca 1 sekme müzik çalabilir
+  // Çoklu sekme ve pencere senkronizasyonu: OBS her zaman çalar, normal sekmeler çift sesi önler
   _initCrossTabSync() {
     if (typeof BroadcastChannel !== 'undefined') {
       try {
@@ -521,6 +553,7 @@ class ConvoyAudioEngine {
         this.tabChannel.onmessage = (event) => {
           if (!event || !event.data) return;
           if (event.data.type === 'CLAIM_MASTER_PLAYBACK' && event.data.tabId !== this.tabId) {
+            if (this.isObs) return; // OBS yayını susmaz
             console.log('[ConvoyAudio] Başka bir sekme aktifleşti. Çift müzik önleme kalkanı devrede.');
             this.isRemoteMuted = true;
             this.pauseMusic(false);
@@ -535,6 +568,7 @@ class ConvoyAudioEngine {
       if (e.key === 'convoy_music_master_tab' || e.key === 'convoy_music_heartbeat') {
         const masterTab = localStorage.getItem('convoy_music_master_tab');
         if (masterTab && masterTab !== this.tabId) {
+          if (this.isObs) return; // OBS yayını susmaz
           this.isRemoteMuted = true;
           if (this.musicPlaying) {
             console.log('[ConvoyAudio] LocalStorage uyarısı: Başka sekme aktif, müzik durduruluyor.');
@@ -564,7 +598,11 @@ class ConvoyAudioEngine {
 
   handleRemoteAudioStop(activeClientId) {
     if (activeClientId && activeClientId !== this.tabId) {
-      console.log('[ConvoyAudio] Uzak istemci (OBS veya başka sekme) müzik çalıyor. Çift müzik önleme kalkanı devreye girdi.');
+      if (this.isObs) {
+        console.log('[ConvoyAudio] OBS yayını asla susturulamaz. Yayın sesi aktif.');
+        return;
+      }
+      console.log('[ConvoyAudio] Uzak istemci müzik çalıyor. İkincil sekme susturuldu.');
       this.isRemoteMuted = true;
       this.pauseMusic(false);
       this.updateNowPlayingUI();
@@ -658,8 +696,13 @@ class ConvoyAudioEngine {
     this._claimMasterPlayback();
 
     this.musicAudio.src = track.url;
+    this.musicAudio.crossOrigin = 'anonymous';
     this.musicAudio.currentTime = 0;
-    this.musicAudio.volume = this.muted ? 0 : this.musicVolume;
+    this._ensureMediaElementSource();
+    this.musicAudio.volume = this.muted ? 0 : (this._mediaSourceConnected ? 1.0 : this.musicVolume);
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.muted ? 0 : this.musicVolume, this.ctx.currentTime);
+    }
 
     // unlockAudio gibi arayüz olaylarının aynı anda startMusic çağırmasını engellemek için durumu hemen true yap
     this.musicPlaying = true;
@@ -765,6 +808,9 @@ class ConvoyAudioEngine {
     this.musicVolume = Math.max(0, Math.min(1, vol));
     if (!this.muted) {
       this.musicAudio.volume = this.musicVolume;
+      if (this.musicGain && this.ctx) {
+        this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+      }
     }
   }
 
@@ -776,10 +822,16 @@ class ConvoyAudioEngine {
     this.muted = !this.muted;
     if (this.muted) {
       this.musicAudio.volume = 0;
+      if (this.musicGain && this.ctx) {
+        this.musicGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      }
       this.pauseMusic(true);
     } else {
       this.isRemoteMuted = false;
       this.musicAudio.volume = this.musicVolume;
+      if (this.musicGain && this.ctx) {
+        this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+      }
       if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume();
       }

@@ -477,6 +477,16 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const { type, payload } = msg;
 
+      // OBS veya Canlı Yayında Gelen Olaylarda Ses Bağlamını Canlı Tut
+      if (audio && (audio.isObs || !audio.musicPlaying) && !audio.muted) {
+        if (audio.ctx && audio.ctx.state === 'suspended') {
+          audio.ctx.resume().catch(() => {});
+        }
+        if (!audio.musicPlaying) {
+          audio.startMusic(true);
+        }
+      }
+
       switch (type) {
       case 'INIT_CONVOY_STATE':
         convoy.syncInitialState(payload);
